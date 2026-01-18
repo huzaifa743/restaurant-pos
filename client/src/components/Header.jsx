@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { getImageURL } from '../utils/api';
 import { Bell, Globe, LogOut, User, Menu } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
@@ -63,7 +64,7 @@ export default function Header({ onMenuToggle, isMenuOpen }) {
           {settings.restaurant_logo ? (
             <div className="mr-4 flex-shrink-0">
               <img
-                src={`http://localhost:5000${settings.restaurant_logo}`}
+                src={getImageURL(settings.restaurant_logo)}
                 alt="Logo"
                 className="h-10 w-auto object-contain max-w-[120px]"
               />

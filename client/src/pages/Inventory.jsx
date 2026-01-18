@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../contexts/SettingsContext';
+import { getImageURL } from '../utils/api';
 import api from '../api/api';
 import toast from 'react-hot-toast';
 import { Plus, Search, Edit, Trash2, X, Folder } from 'lucide-react';
@@ -251,7 +252,7 @@ export default function Inventory() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {product.image ? (
                         <img
-                          src={`http://localhost:5000${product.image}`}
+                          src={getImageURL(product.image)}
                           alt={product.name}
                           className="w-16 h-16 object-cover rounded"
                         />

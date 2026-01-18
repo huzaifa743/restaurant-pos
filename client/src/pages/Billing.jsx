@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../contexts/SettingsContext';
+import { getImageURL } from '../utils/api';
 import api from '../api/api';
 import toast from 'react-hot-toast';
 import { getReceiptPrintStyles } from '../utils/receiptPrintStyles';
@@ -307,7 +308,7 @@ export default function Billing() {
                   <div className="flex items-start gap-3 mb-2">
                     {item.product_image && (
                       <img
-                        src={`http://localhost:5000${item.product_image}`}
+                        src={getImageURL(item.product_image)}
                         alt={item.product_name}
                         className="w-12 h-12 object-cover rounded"
                       />
@@ -507,7 +508,7 @@ export default function Billing() {
                     <div className="w-full h-32 bg-gray-200 rounded mb-3 flex items-center justify-center overflow-hidden">
                       {product.image ? (
                         <img
-                          src={`http://localhost:5000${product.image}`}
+                          src={getImageURL(product.image)}
                           alt={product.name}
                           className="w-full h-full object-cover"
                         />

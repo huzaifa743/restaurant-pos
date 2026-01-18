@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../contexts/SettingsContext';
+import { getImageURL } from '../utils/api';
 import { X, Printer } from 'lucide-react';
 
 export default function ReceiptPrint({ sale, onClose, onPrint }) {
@@ -164,7 +165,7 @@ export default function ReceiptPrint({ sale, onClose, onPrint }) {
               {settings.restaurant_logo && (
                 <div className="receipt-logo">
                   <img
-                    src={`http://localhost:5000${settings.restaurant_logo}`}
+                    src={getImageURL(settings.restaurant_logo)}
                     alt="Logo"
                     className="logo-img"
                   />

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import api from '../api/api';
+import { getImageURL } from '../utils/api';
 import toast from 'react-hot-toast';
 import { Save, Upload, Globe, DollarSign, Receipt, Building2 } from 'lucide-react';
 
@@ -37,7 +38,7 @@ export default function Settings() {
       const response = await api.get('/settings');
       setSettings(prev => ({ ...prev, ...response.data }));
       if (response.data.restaurant_logo) {
-        setLogoPreview(`http://localhost:5000${response.data.restaurant_logo}`);
+        setLogoPreview(getImageURL(response.data.restaurant_logo));
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -97,7 +98,7 @@ export default function Settings() {
       updateContextSettings(response.data);
       
       if (response.data.restaurant_logo) {
-        setLogoPreview(`http://localhost:5000${response.data.restaurant_logo}`);
+        setLogoPreview(getImageURL(response.data.restaurant_logo));
       }
       
       // Update language if changed

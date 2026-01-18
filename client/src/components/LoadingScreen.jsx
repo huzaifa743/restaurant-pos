@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
+import { getImageURL } from '../utils/api';
 
 export default function LoadingScreen() {
   const { settings } = useSettings();
@@ -21,7 +22,7 @@ export default function LoadingScreen() {
       <div className="flex flex-col items-center justify-center">
         {settings?.restaurant_logo ? (
           <img
-            src={`http://localhost:5000${settings.restaurant_logo}`}
+            src={getImageURL(settings.restaurant_logo)}
             alt={settings.restaurant_name || 'Restaurant Logo'}
             className="max-w-[200px] max-h-[150px] w-auto h-auto object-contain mb-4 animate-pulse"
             onError={(e) => {
