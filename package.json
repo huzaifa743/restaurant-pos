@@ -7,7 +7,7 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "nodemon server/index.js",
     "client": "cd client && npm run dev",
-    "build": "npm run install-all && cd client && npm run build",
+    "build": "npm run install-all && cd client && npx vite build",
     "start": "node --no-deprecation server/index.js",
     "install-all": "npm install && cd client && npm install",
     "postinstall": "cd client && npm install",
