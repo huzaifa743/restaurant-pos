@@ -30,7 +30,9 @@ export default function Settings() {
   const [logoFile, setLogoFile] = useState(null);
 
   useEffect(() => {
+    // Only fetch settings once when component mounts
     fetchSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchSettings = async () => {

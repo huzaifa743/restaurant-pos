@@ -28,6 +28,7 @@ export const SettingsProvider = ({ children }) => {
   const hasFetchedRef = useRef(false);
 
   const fetchSettings = useCallback(async (force = false) => {
+    // Prevent multiple simultaneous fetches
     if (hasFetchedRef.current && !force) return;
     
     if (force) {
@@ -40,16 +41,25 @@ export const SettingsProvider = ({ children }) => {
       const response = await api.get('/settings');
       setSettings(prev => ({ ...prev, ...response.data }));
     } catch (error) {
-      console.error('Error fetching settings:', error);
+      // Handle 401 and other errors gracefully
+      if (error.response?.status === 401) {
+        // Settings endpoint should be public, but if auth is required, use defaults
+        console.warn('Settings endpoint requires auth, using defaults');
+      } else {
+        console.error('Error fetching settings:', error);
+      }
       hasFetchedRef.current = false; // Allow retry on error
-      // Don't throw, just use defaults
+      // Don't throw, just use defaults - keep current settings
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchSettings();
+    // Only fetch once on mount
+    if (!hasFetchedRef.current) {
+      fetchSettings();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

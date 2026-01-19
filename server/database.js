@@ -2,7 +2,51 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-const dbPath = path.join(__dirname, 'pos.db');
+// Database path configuration
+// Railway: Persistent storage works on free tier - database persists across restarts
+// Render: Free tier does NOT support persistent disk storage - use PostgreSQL or upgrade
+// You can set DB_PATH environment variable to override the default path
+let dbPath;
+if (process.env.DB_PATH) {
+  // Use custom path from environment variable
+  dbPath = process.env.DB_PATH;
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+} else if (process.env.RAILWAY_ENVIRONMENT) {
+  // Railway: Use persistent storage directory
+  // Railway provides persistent storage on free tier
+  const railwayDataPath = process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
+  dbPath = path.join(railwayDataPath, 'pos.db');
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+  console.log('✅ Railway: Using persistent storage for database');
+} else if (process.env.RENDER && process.env.RENDER_DISK_PATH) {
+  // Use Render persistent disk path if available (paid plans only)
+  dbPath = path.join(process.env.RENDER_DISK_PATH, 'pos.db');
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+} else {
+  // Default: use server directory
+  // Ephemeral on Render free tier, persistent on Railway
+  dbPath = path.join(__dirname, 'pos.db');
+}
+
+console.log(`Database path: ${dbPath}`);
+
+// Warning about Render free tier persistence
+if (process.env.RENDER && !process.env.RENDER_DISK_PATH && !process.env.DB_PATH) {
+  console.warn('⚠️  WARNING: Render free tier does NOT support persistent disk storage.');
+  console.warn('⚠️  Your SQLite database will be lost on every restart/deployment.');
+  console.warn('⚠️  For persistence, use Render PostgreSQL (free) or upgrade to paid plan.');
+} else if (process.env.RAILWAY_ENVIRONMENT) {
+  console.log('✅ Railway: Database will persist across restarts');
+}
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -14,7 +58,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Error opening database:', err);
   } else {
-    console.log('Connected to SQLite database');
+    console.log('✅ Connected to SQLite database');
     initializeDatabase();
   }
 });

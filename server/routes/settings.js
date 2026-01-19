@@ -37,8 +37,9 @@ const upload = multer({
   }
 });
 
-// Get all settings
-router.get('/', authenticateToken, async (req, res) => {
+// Get all settings (public - needed for UI before login)
+// Settings like restaurant name, logo, currency are public information
+router.get('/', async (req, res) => {
   try {
     const settings = await query('SELECT * FROM settings');
     const settingsObj = {};
