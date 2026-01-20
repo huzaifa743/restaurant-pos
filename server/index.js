@@ -4,35 +4,56 @@ const path = require('path');
 require('dotenv').config();
 
 // Import tenantManager to check if setup is needed
-const { masterDbHelpers } = require('./tenantManager');
+const { masterDbHelpers, ensureInitialized } = require('./tenantManager');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Auto-setup on first run (only if tables exist but no data)
+// Auto-setup on first run
 (async () => {
   try {
-    // Check if super admin exists
-    const superAdmin = await masterDbHelpers.get('SELECT * FROM super_admins LIMIT 1');
-    if (!superAdmin) {
-      console.log('\n⚠️  WARNING: Super admin not found!');
-      console.log('⚠️  Please run: npm run setup-all');
-      console.log('⚠️  Or wait a moment - auto-setup may run on first request.\n');
-    } else {
-      console.log('✅ Super admin account found');
+    // Ensure database is initialized
+    await ensureInitialized();
+    
+    // Check if super admin exists, create if missing
+    try {
+      const superAdmin = await masterDbHelpers.get('SELECT * FROM super_admins LIMIT 1');
+      if (!superAdmin) {
+        console.log('\n⚠️  Super admin not found!');
+        console.log('⚠️  Run: npm run setup-super-admin (or it will be created on first super admin login attempt)\n');
+      } else {
+        console.log('✅ Super admin account found');
+      }
+    } catch (err) {
+      console.log('⚠️  Could not check super admin:', err.message);
     }
     
-    // Check if demo tenant exists
-    const demoTenant = await masterDbHelpers.get('SELECT * FROM tenants WHERE tenant_code = ?', ['DEMO']);
-    if (!demoTenant) {
-      console.log('⚠️  Demo tenant not found. Run: npm run setup-demo');
+    // Auto-create demo tenant if it doesn't exist
+    try {
+      const demoTenant = await masterDbHelpers.get('SELECT * FROM tenants WHERE tenant_code = ?', ['DEMO']);
+      if (!demoTenant) {
+        console.log('⚠️  Demo tenant not found. Auto-creating demo tenant with sample data...');
+        const { autoSetupDemoTenant } = require('./autoSetupDemo');
+        const result = await autoSetupDemoTenant();
+        if (result.success) {
+          console.log('✅ Demo tenant auto-created successfully!');
+        } else {
+          console.log('⚠️  Auto-setup failed:', result.error);
+          console.log('   Run manually: npm run setup-demo');
+        }
+      } else {
+        console.log('✅ Demo tenant found');
+      }
+    } catch (err) {
+      console.log('⚠️  Could not check/create demo tenant:', err.message);
+      console.log('   Run manually: npm run setup-demo');
     }
   } catch (error) {
     if (error.message && error.message.includes('no such table')) {
       console.log('\n⚠️  WARNING: Database tables not initialized!');
       console.log('⚠️  Please run: npm run setup-all\n');
     } else {
-      console.error('Error checking setup:', error.message);
+      console.error('Error in auto-setup:', error.message);
     }
   }
 })();
