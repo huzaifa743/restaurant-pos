@@ -215,7 +215,7 @@ export default function Billing() {
       }
     } catch (error) {
       console.error('Error completing sale:', error);
-      toast.error('Failed to complete sale');
+      toast.error(error.response?.data?.error || 'Failed to complete sale');
     }
   };
 

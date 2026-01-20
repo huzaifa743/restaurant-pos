@@ -1,6 +1,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { getTenantDb, closeTenantDb } = require('../middleware/tenant');
+const { preventDemoModifications } = require('../middleware/demoRestriction');
 
 const router = express.Router();
 
@@ -30,7 +31,7 @@ router.get('/:id', authenticateToken, getTenantDb, closeTenantDb, async (req, re
 });
 
 // Create category
-router.post('/', authenticateToken, getTenantDb, closeTenantDb, async (req, res) => {
+router.post('/', authenticateToken, preventDemoModifications, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     const { name, description } = req.body;
 
@@ -55,7 +56,7 @@ router.post('/', authenticateToken, getTenantDb, closeTenantDb, async (req, res)
 });
 
 // Update category
-router.put('/:id', authenticateToken, getTenantDb, closeTenantDb, async (req, res) => {
+router.put('/:id', authenticateToken, preventDemoModifications, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     const { name, description } = req.body;
 
@@ -76,7 +77,7 @@ router.put('/:id', authenticateToken, getTenantDb, closeTenantDb, async (req, re
 });
 
 // Delete category
-router.delete('/:id', authenticateToken, getTenantDb, closeTenantDb, async (req, res) => {
+router.delete('/:id', authenticateToken, preventDemoModifications, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     // Check if category has products
     const products = await req.db.query('SELECT COUNT(*) as count FROM products WHERE category_id = ?', [req.params.id]);

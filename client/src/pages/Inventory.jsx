@@ -105,7 +105,7 @@ export default function Inventory() {
       fetchProducts();
     } catch (error) {
       console.error('Error saving product:', error);
-      toast.error('Failed to save product');
+      toast.error(error.response?.data?.error || 'Failed to save product');
     }
   };
 
@@ -130,7 +130,7 @@ export default function Inventory() {
       fetchCategories();
     } catch (error) {
       console.error('Error saving category:', error);
-      toast.error('Failed to save category');
+      toast.error(error.response?.data?.error || 'Failed to save category');
     }
   };
 
@@ -157,7 +157,7 @@ export default function Inventory() {
       fetchProducts();
     } catch (error) {
       console.error('Error deleting product:', error);
-      toast.error('Failed to delete product');
+      toast.error(error.response?.data?.error || 'Failed to delete product');
     }
   };
 
@@ -498,7 +498,7 @@ export default function Inventory() {
                               fetchCategories();
                             } catch (error) {
                               console.error('Error deleting category:', error);
-                              toast.error('Failed to delete category');
+                              toast.error(error.response?.data?.error || 'Failed to delete category');
                             }
                           }
                         }}

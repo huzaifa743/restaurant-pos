@@ -1,6 +1,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { getTenantDb, closeTenantDb } = require('../middleware/tenant');
+const { preventDemoModifications } = require('../middleware/demoRestriction');
 
 const router = express.Router();
 
@@ -42,7 +43,7 @@ router.get('/:id', authenticateToken, getTenantDb, closeTenantDb, async (req, re
 });
 
 // Create customer
-router.post('/', authenticateToken, getTenantDb, closeTenantDb, async (req, res) => {
+router.post('/', authenticateToken, preventDemoModifications, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     const { name, phone, email, country, city, address } = req.body;
 
@@ -82,7 +83,7 @@ router.put('/:id', authenticateToken, getTenantDb, closeTenantDb, async (req, re
 });
 
 // Delete customer
-router.delete('/:id', authenticateToken, getTenantDb, closeTenantDb, async (req, res) => {
+router.delete('/:id', authenticateToken, preventDemoModifications, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     await req.db.run('DELETE FROM customers WHERE id = ?', [req.params.id]);
     res.json({ message: 'Customer deleted successfully' });

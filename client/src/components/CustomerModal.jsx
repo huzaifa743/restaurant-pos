@@ -50,7 +50,7 @@ export default function CustomerModal({ onClose, onSelect }) {
       onSelect(response.data);
     } catch (error) {
       console.error('Error adding customer:', error);
-      toast.error('Failed to add customer');
+      toast.error(error.response?.data?.error || 'Failed to add customer');
     }
   };
 

@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { getTenantDb, closeTenantDb } = require('../middleware/tenant');
+const { preventDemoModifications } = require('../middleware/demoRestriction');
 
 const router = express.Router();
 
@@ -31,7 +32,7 @@ router.get('/:id', authenticateToken, requireRole('admin'), getTenantDb, closeTe
 });
 
 // Create user
-router.post('/', authenticateToken, requireRole('admin'), getTenantDb, closeTenantDb, async (req, res) => {
+router.post('/', authenticateToken, requireRole('admin'), preventDemoModifications, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     const { username, email, password, full_name, role } = req.body;
 
@@ -58,7 +59,7 @@ router.post('/', authenticateToken, requireRole('admin'), getTenantDb, closeTena
 });
 
 // Update user
-router.put('/:id', authenticateToken, requireRole('admin'), getTenantDb, closeTenantDb, async (req, res) => {
+router.put('/:id', authenticateToken, requireRole('admin'), preventDemoModifications, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     const { username, email, password, full_name, role } = req.body;
 
@@ -87,7 +88,7 @@ router.put('/:id', authenticateToken, requireRole('admin'), getTenantDb, closeTe
 });
 
 // Delete user
-router.delete('/:id', authenticateToken, requireRole('admin'), getTenantDb, closeTenantDb, async (req, res) => {
+router.delete('/:id', authenticateToken, requireRole('admin'), preventDemoModifications, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     if (parseInt(req.params.id) === req.user.id) {
       return res.status(400).json({ error: 'Cannot delete your own account' });

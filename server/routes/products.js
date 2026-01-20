@@ -86,7 +86,7 @@ router.get('/:id', authenticateToken, getTenantDb, closeTenantDb, async (req, re
 });
 
 // Create product
-router.post('/', authenticateToken, getTenantDb, closeTenantDb, upload.single('image'), async (req, res) => {
+router.post('/', authenticateToken, preventDemoModifications, getTenantDb, closeTenantDb, upload.single('image'), async (req, res) => {
   try {
     const { name, price, category_id, description } = req.body;
 
@@ -111,7 +111,7 @@ router.post('/', authenticateToken, getTenantDb, closeTenantDb, upload.single('i
 });
 
 // Update product
-router.put('/:id', authenticateToken, getTenantDb, closeTenantDb, upload.single('image'), async (req, res) => {
+router.put('/:id', authenticateToken, preventDemoModifications, getTenantDb, closeTenantDb, upload.single('image'), async (req, res) => {
   try {
     const { name, price, category_id, description } = req.body;
     const productId = req.params.id;
@@ -146,7 +146,7 @@ router.put('/:id', authenticateToken, getTenantDb, closeTenantDb, upload.single(
 });
 
 // Delete product
-router.delete('/:id', authenticateToken, getTenantDb, closeTenantDb, async (req, res) => {
+router.delete('/:id', authenticateToken, preventDemoModifications, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     const product = await req.db.get('SELECT image FROM products WHERE id = ?', [req.params.id]);
     

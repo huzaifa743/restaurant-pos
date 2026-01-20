@@ -113,7 +113,7 @@ export default function Settings() {
       setLogoFile(null);
     } catch (error) {
       console.error('Error saving settings:', error);
-      toast.error('Failed to save settings');
+      toast.error(error.response?.data?.error || 'Failed to save settings');
     } finally {
       setSaving(false);
     }
