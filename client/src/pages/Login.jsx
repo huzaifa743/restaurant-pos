@@ -90,12 +90,30 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <p className="font-semibold mb-2">Super Admin:</p>
-          <p className="font-mono text-xs">Username: superadmin</p>
-          <p className="font-mono text-xs">Password: superadmin123</p>
-          <p className="font-mono text-xs">Tenant Code: (leave empty)</p>
-          <p className="mt-4 text-xs text-gray-500">For restaurant owners, use credentials provided by super admin</p>
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="font-semibold mb-3 text-blue-900">🔐 Demo Account (For Testing)</p>
+          <div className="text-left space-y-1 text-sm">
+            <p className="font-medium text-blue-800">Tenant Code:</p>
+            <p className="font-mono text-xs bg-white p-2 rounded border border-blue-200">DEMO</p>
+            
+            <p className="font-medium text-blue-800 mt-3">Username (Admin):</p>
+            <p className="font-mono text-xs bg-white p-2 rounded border border-blue-200">demo</p>
+            
+            <p className="font-medium text-blue-800 mt-3">Password:</p>
+            <p className="font-mono text-xs bg-white p-2 rounded border border-blue-200">demo123</p>
+          </div>
+          
+          <div className="mt-4 pt-4 border-t border-blue-200">
+            <p className="font-medium text-blue-800 mb-2">Cashier Account:</p>
+            <p className="text-xs text-blue-700">Tenant Code: <span className="font-mono">DEMO</span> | Username: <span className="font-mono">cashier</span> | Password: <span className="font-mono">cashier123</span></p>
+          </div>
+          
+          <p className="mt-4 text-xs text-blue-600">
+            ⚠️ This is a demo account with pre-loaded sample data for testing purposes only.
+          </p>
+          <p className="mt-2 text-xs text-gray-500">
+            Demo includes: Products, Categories, Customers, and Sample Sales
+          </p>
         </div>
       </div>
     </div>

@@ -15,25 +15,35 @@ router.post('/login', async (req, res) => {
     // Check if super admin login (no tenant_code)
     if (!tenant_code) {
       // Super admin login - check master database
-      // For now, we'll use a special super admin account
-      // You should create this separately
-      if (username === 'superadmin' && password === 'superadmin123') {
-        const token = jwt.sign(
-          { id: 0, username: 'superadmin', role: 'super_admin', tenant_code: null },
-          JWT_SECRET,
-          { expiresIn: '24h' }
-        );
-        return res.json({
-          token,
-          user: {
-            id: 0,
-            username: 'superadmin',
-            role: 'super_admin',
-            tenant_code: null
-          }
-        });
+      const superAdmin = await masterDbHelpers.get(
+        'SELECT * FROM super_admins WHERE username = ?',
+        [username]
+      );
+
+      if (!superAdmin) {
+        return res.status(401).json({ error: 'Invalid credentials' });
       }
-      return res.status(401).json({ error: 'Invalid credentials' });
+
+      const validPassword = await bcrypt.compare(password, superAdmin.password);
+      if (!validPassword) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      const token = jwt.sign(
+        { id: superAdmin.id, username: superAdmin.username, role: 'super_admin', tenant_code: null },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      return res.json({
+        token,
+        user: {
+          id: superAdmin.id,
+          username: superAdmin.username,
+          email: superAdmin.email,
+          role: 'super_admin',
+          tenant_code: null
+        }
+      });
     }
 
     // Tenant login - check master database first for tenant owner

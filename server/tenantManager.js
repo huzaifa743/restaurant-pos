@@ -24,6 +24,21 @@ const masterDb = new sqlite3.Database(masterDbPath, (err) => {
 // Initialize master database
 function initializeMasterDatabase() {
   masterDb.serialize(() => {
+    // Super admins table - stores super admin accounts
+    masterDb.run(`CREATE TABLE IF NOT EXISTS super_admins (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      email TEXT UNIQUE,
+      full_name TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`, (err) => {
+      if (err) {
+        console.error('Error creating super_admins table:', err);
+      }
+    });
+
     // Tenants table - stores information about each restaurant/tenant
     masterDb.run(`CREATE TABLE IF NOT EXISTS tenants (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
