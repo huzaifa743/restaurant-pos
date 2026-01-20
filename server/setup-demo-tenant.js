@@ -25,8 +25,40 @@ async function setupDemoTenant() {
 
     if (existingTenant) {
       console.log('⚠️  Demo tenant already exists. Deleting old demo tenant...');
+      
+      // Close any open database connections first
+      const fs = require('fs');
+      const path = require('path');
+      const { getTenantDbPath } = require('./tenantManager');
+      const tenantDbPath = getTenantDbPath(tenantCode);
+      
+      // Try to close and delete the database file if it exists
+      if (fs.existsSync(tenantDbPath)) {
+        try {
+          // Try to close any open connections (if database is already open)
+          const { getTenantDatabase, createDbHelpers } = require('./tenantManager');
+          try {
+            const existingDb = await getTenantDatabase(tenantCode);
+            const db = createDbHelpers(existingDb);
+            await db.close();
+          } catch (e) {
+            // Database might not be open, ignore
+          }
+          
+          // Wait a moment for file handles to release
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Now delete the file
+          fs.unlinkSync(tenantDbPath);
+          console.log('✅ Deleted existing tenant database file');
+        } catch (err) {
+          console.warn('⚠️  Could not delete existing database file:', err.message);
+          console.warn('   Will try to recreate database (may cause conflicts)');
+        }
+      }
+      
+      // Delete from master database
       await masterDbHelpers.run('DELETE FROM tenants WHERE tenant_code = ?', [tenantCode]);
-      // Note: In production, you might want to keep the database file
     }
 
     // Create tenant in master database
