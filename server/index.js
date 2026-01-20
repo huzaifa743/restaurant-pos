@@ -9,23 +9,30 @@ const { masterDbHelpers } = require('./tenantManager');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Check if super admin exists on startup
+// Auto-setup on first run (only if tables exist but no data)
 (async () => {
   try {
+    // Check if super admin exists
     const superAdmin = await masterDbHelpers.get('SELECT * FROM super_admins LIMIT 1');
     if (!superAdmin) {
       console.log('\n⚠️  WARNING: Super admin not found!');
       console.log('⚠️  Please run: npm run setup-all');
-      console.log('⚠️  This will create super admin and demo tenant.\n');
+      console.log('⚠️  Or wait a moment - auto-setup may run on first request.\n');
     } else {
       console.log('✅ Super admin account found');
+    }
+    
+    // Check if demo tenant exists
+    const demoTenant = await masterDbHelpers.get('SELECT * FROM tenants WHERE tenant_code = ?', ['DEMO']);
+    if (!demoTenant) {
+      console.log('⚠️  Demo tenant not found. Run: npm run setup-demo');
     }
   } catch (error) {
     if (error.message && error.message.includes('no such table')) {
       console.log('\n⚠️  WARNING: Database tables not initialized!');
       console.log('⚠️  Please run: npm run setup-all\n');
     } else {
-      console.error('Error checking super admin:', error.message);
+      console.error('Error checking setup:', error.message);
     }
   }
 })();
@@ -50,6 +57,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/setup', require('./routes/setup')); // Setup endpoints
 app.use('/api/tenants', require('./routes/tenants')); // Tenant management (super admin only)
 app.use('/api/products', require('./routes/products'));
 app.use('/api/categories', require('./routes/categories'));

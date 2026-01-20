@@ -151,8 +151,16 @@ router.post('/login', async (req, res) => {
     } catch (tenantDbError) {
       console.error('Tenant database error:', tenantDbError);
       if (tenantDbError.message && tenantDbError.message.includes('not found')) {
+        // If DEMO tenant, provide helpful message with auto-setup info
+        if (tenant_code === 'DEMO' || tenant_code === 'demo') {
+          return res.status(404).json({ 
+            error: `Demo tenant not found. Please run: npm run setup-demo`,
+            setup_required: true,
+            tenant_code: 'DEMO'
+          });
+        }
         return res.status(404).json({ 
-          error: `Tenant '${tenant_code}' not found. Please run: npm run setup-demo` 
+          error: `Tenant '${tenant_code}' not found.` 
         });
       }
       throw tenantDbError; // Re-throw to be caught by outer catch

@@ -30,7 +30,11 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password, tenantCode = '') => {
     try {
-      const response = await axios.post('/api/auth/login', { 
+      // Use the same API base URL configuration as api.js
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 
+        (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+      
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, { 
         username, 
         password, 
         tenant_code: tenantCode || undefined 

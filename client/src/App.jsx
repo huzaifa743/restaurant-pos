@@ -61,12 +61,12 @@ function AppContent() {
   const { user } = useAuth();
 
   useEffect(() => {
-    // Show loading screen for at least 1.5 seconds
+    // Show loading screen for at least 500ms (reduced from 1.5s)
     const timer = setTimeout(() => {
       if (!settingsLoading) {
         setShowLoading(false);
       }
-    }, 1500);
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [settingsLoading]);

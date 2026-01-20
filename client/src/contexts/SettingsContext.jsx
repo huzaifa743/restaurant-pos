@@ -59,6 +59,9 @@ export const SettingsProvider = ({ children }) => {
       if (error.response?.status === 401) {
         // Settings endpoint should be public, but if auth is required, use defaults
         console.warn('Settings endpoint requires auth, using defaults');
+      } else if (error.response?.status === 404) {
+        // Tenant not found - use defaults silently
+        console.warn('Tenant settings not found, using defaults');
       } else {
         console.error('Error fetching settings:', error);
       }
