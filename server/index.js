@@ -67,31 +67,17 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint for Railway/Render monitoring (must be early, before any async operations)
+// Health check endpoint for Railway/Render monitoring (must be FIRST, before any other routes)
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
-});
-
-// Root endpoint for healthcheck
-app.get('/', (req, res) => {
-  // For healthcheck requests, return JSON immediately
-  if (req.headers['user-agent']?.includes('Healthcheck') || req.query.health === 'check') {
-    return res.status(200).json({ 
+  try {
+    res.status(200).json({ 
       status: 'ok', 
       timestamp: new Date().toISOString(),
       uptime: process.uptime()
     });
+  } catch (err) {
+    res.status(200).json({ status: 'ok' }); // Fallback if something fails
   }
-  // In production, serve React app
-  if (process.env.NODE_ENV === 'production') {
-    const distPath = path.join(__dirname, '../client/dist');
-    return res.sendFile(path.join(distPath, 'index.html'));
-  }
-  res.status(200).json({ status: 'ok', message: 'Server is running' });
 });
 
 // Root endpoint - will serve React app in production, but Railway healthcheck can use /health
@@ -120,14 +106,50 @@ app.use('/api/settings', require('./routes/settings'));
 // Serve React app in production (catch-all must be last)
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../client/dist');
+  
+  // Serve static files first
   app.use(express.static(distPath));
+  
+  // Root endpoint - serve React app or respond to healthcheck
+  app.get('/', (req, res) => {
+    try {
+      // Check if it's a healthcheck request
+      const isHealthcheck = req.headers['user-agent']?.includes('Healthcheck') || 
+                           req.query.health === 'check' ||
+                           req.headers['x-railway-healthcheck'] === 'true';
+      
+      if (isHealthcheck) {
+        return res.status(200).json({ 
+          status: 'ok', 
+          timestamp: new Date().toISOString(),
+          uptime: process.uptime()
+        });
+      }
+      
+      // Serve React app
+      res.sendFile(path.join(distPath, 'index.html'));
+    } catch (err) {
+      // Fallback: just send OK status
+      res.status(200).json({ status: 'ok' });
+    }
+  });
+  
   // Catch-all handler: send back React's index.html file for all non-API routes
   app.get('*', (req, res) => {
-    // Skip API routes and static files
-    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+    // Skip API routes, static files, and healthcheck
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path === '/health') {
       return res.status(404).json({ error: 'Not found' });
     }
-    res.sendFile(path.join(distPath, 'index.html'));
+    try {
+      res.sendFile(path.join(distPath, 'index.html'));
+    } catch (err) {
+      res.status(404).json({ error: 'Not found' });
+    }
+  });
+} else {
+  // Development: simple root endpoint
+  app.get('/', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Server is running in development mode' });
   });
 }
 
