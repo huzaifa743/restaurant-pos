@@ -8,7 +8,7 @@
     "server": "nodemon server/index.js",
     "client": "cd client && npm run dev",
     "build": "npm run install-all && cd client && npx vite build",
-    "start": "NODE_ENV=production node --no-deprecation server/index.js",
+    "start": "node --no-deprecation server/index.js",
     "install-all": "npm install --production=false && cd client && npm install --production=false",
     "postinstall": "cd client && npm install --production=false",
     "setup-super-admin": "node server/setup-super-admin.js",

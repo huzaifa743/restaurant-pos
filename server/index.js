@@ -70,19 +70,7 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Root endpoint for healthcheck (before React app route)
-app.get('/', (req, res) => {
-  // In production, this will be caught by React app route below
-  // But during healthcheck, return JSON response
-  if (req.headers['user-agent']?.includes('Healthcheck')) {
-    return res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-  }
-  // In production, serve React app
-  if (process.env.NODE_ENV === 'production') {
-    return res.sendFile(path.join(__dirname, '../client/dist/index.html'));
-  }
-  res.status(200).json({ status: 'ok', message: 'Server is running' });
-});
+// Root endpoint - will serve React app in production, but Railway healthcheck can use /health
 
 // Keep-alive endpoint to prevent Render from spinning down
 app.get('/api/ping', (req, res) => {
