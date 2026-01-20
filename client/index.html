@@ -10,6 +10,54 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Early console filter to suppress osano.js and preload warnings -->
+    <script>
+      (function() {
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        // Filter console.error for osano.js SVG errors
+        console.error = function() {
+          const args = Array.from(arguments);
+          const message = args[0]?.toString() || '';
+          const fullMessage = args.join(' ').toLowerCase();
+          
+          if (
+            (message.includes('viewBox') && message.includes('Expected number')) ||
+            fullMessage.includes('osano') ||
+            (fullMessage.includes('viewbox') && fullMessage.includes('expected number')) ||
+            (message.includes('<svg>') && message.includes('attribute viewBox'))
+          ) {
+            return; // Suppress these harmless errors
+          }
+          originalError.apply(console, args);
+        };
+        
+        // Filter console.warn for osano.js SVG errors and preload warnings
+        console.warn = function() {
+          const args = Array.from(arguments);
+          const message = args[0]?.toString() || '';
+          const fullMessage = args.join(' ').toLowerCase();
+          
+          // Filter osano.js SVG viewBox warnings
+          if (
+            (message.includes('viewBox') && message.includes('Expected number')) ||
+            fullMessage.includes('osano') ||
+            (fullMessage.includes('viewbox') && fullMessage.includes('expected number')) ||
+            (message.includes('<svg>') && message.includes('attribute viewBox'))
+          ) {
+            return; // Suppress these harmless warnings
+          }
+          
+          // Filter preload warnings (harmless browser warnings)
+          if (message.includes('preloaded using link preload but not used')) {
+            return; // Suppress preload warnings
+          }
+          
+          originalWarn.apply(console, args);
+        };
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
