@@ -276,9 +276,6 @@ export default function ReceiptPrint({ sale, onClose, onPrint }) {
               <p className="receipt-thanks">THANKS FOR COMING {settings.restaurant_name?.toUpperCase() || 'RESTAURANT'}</p>
               <p className="receipt-nice-day">Have a nice day!</p>
               <div className="receipt-divider"></div>
-              <p className="receipt-software">Software By: NFM Servces & Solutions</p>
-              <p className="receipt-phone">0337-7249638</p>
-              <div className="receipt-divider"></div>
             </div>
           </div>
         </div>
