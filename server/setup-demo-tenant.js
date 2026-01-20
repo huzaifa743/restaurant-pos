@@ -78,6 +78,13 @@ async function setupDemoTenant() {
     const tenantDb = await getTenantDatabase(tenantCode);
     const db = createDbHelpers(tenantDb);
 
+    // Check if categories already exist
+    const existingCategories = await db.query('SELECT name, id FROM categories');
+    const existingCategoryMap = {};
+    existingCategories.forEach(cat => {
+      existingCategoryMap[cat.name] = cat.id;
+    });
+
     // Insert demo categories
     const categories = [
       { name: 'Beverages', description: 'Hot and cold drinks' },
@@ -90,12 +97,17 @@ async function setupDemoTenant() {
     console.log('\n📦 Adding demo categories...');
     const categoryIds = {};
     for (const category of categories) {
-      const result = await db.run(
-        'INSERT INTO categories (name, description) VALUES (?, ?)',
-        [category.name, category.description]
-      );
-      categoryIds[category.name] = result.id;
-      console.log(`   ✅ Added: ${category.name}`);
+      if (existingCategoryMap[category.name]) {
+        categoryIds[category.name] = existingCategoryMap[category.name];
+        console.log(`   ⚠️  Category "${category.name}" already exists, skipping...`);
+      } else {
+        const result = await db.run(
+          'INSERT INTO categories (name, description) VALUES (?, ?)',
+          [category.name, category.description]
+        );
+        categoryIds[category.name] = result.id;
+        console.log(`   ✅ Added: ${category.name}`);
+      }
     }
 
     // Insert demo products
@@ -133,15 +145,27 @@ async function setupDemoTenant() {
     ];
 
     console.log('\n🍕 Adding demo products...');
+    // Check existing products
+    const existingProducts = await db.query('SELECT name, id FROM products');
+    const existingProductMap = {};
+    existingProducts.forEach(prod => {
+      existingProductMap[prod.name] = prod.id;
+    });
+
     const productIds = {};
     for (const product of products) {
-      const categoryId = categoryIds[product.category];
-      const result = await db.run(
-        'INSERT INTO products (name, price, category_id, description, stock_quantity) VALUES (?, ?, ?, ?, ?)',
-        [product.name, product.price, categoryId, product.description, product.stock]
-      );
-      productIds[product.name] = result.id;
-      console.log(`   ✅ Added: ${product.name} - $${product.price.toFixed(2)}`);
+      if (existingProductMap[product.name]) {
+        productIds[product.name] = existingProductMap[product.name];
+        console.log(`   ⚠️  Product "${product.name}" already exists, skipping...`);
+      } else {
+        const categoryId = categoryIds[product.category];
+        const result = await db.run(
+          'INSERT INTO products (name, price, category_id, description, stock_quantity) VALUES (?, ?, ?, ?, ?)',
+          [product.name, product.price, categoryId, product.description, product.stock]
+        );
+        productIds[product.name] = result.id;
+        console.log(`   ✅ Added: ${product.name} - $${product.price.toFixed(2)}`);
+      }
     }
 
     // Insert demo customers
@@ -154,24 +178,54 @@ async function setupDemoTenant() {
     ];
 
     console.log('\n👥 Adding demo customers...');
+    // Check existing customers
+    const existingCustomers = await db.query('SELECT email, id FROM customers WHERE email IS NOT NULL');
+    const existingCustomerMap = {};
+    existingCustomers.forEach(cust => {
+      existingCustomerMap[cust.email] = cust.id;
+    });
+
     const customerIds = [];
     for (const customer of customers) {
-      const result = await db.run(
-        'INSERT INTO customers (name, phone, email, city, country) VALUES (?, ?, ?, ?, ?)',
-        [customer.name, customer.phone, customer.email, customer.city, customer.country]
-      );
-      customerIds.push(result.id);
-      console.log(`   ✅ Added: ${customer.name}`);
+      if (existingCustomerMap[customer.email]) {
+        customerIds.push(existingCustomerMap[customer.email]);
+        console.log(`   ⚠️  Customer "${customer.name}" already exists, skipping...`);
+      } else {
+        const result = await db.run(
+          'INSERT INTO customers (name, phone, email, city, country) VALUES (?, ?, ?, ?, ?)',
+          [customer.name, customer.phone, customer.email, customer.city, customer.country]
+        );
+        customerIds.push(result.id);
+        console.log(`   ✅ Added: ${customer.name}`);
+      }
     }
 
     // Create a demo user (cashier)
-    const cashierPassword = await bcrypt.hash('cashier123', 10);
-    await db.run(
-      'INSERT INTO users (username, email, password, full_name, role) VALUES (?, ?, ?, ?, ?)',
-      ['cashier', 'cashier@demo.com', cashierPassword, 'Demo Cashier', 'cashier']
-    );
-    const cashier = await db.get('SELECT id FROM users WHERE username = ?', ['cashier']);
-    console.log('\n👤 Created demo cashier user (username: cashier, password: cashier123)');
+    let cashier = await db.get('SELECT id FROM users WHERE username = ?', ['cashier']);
+    if (!cashier) {
+      const cashierPassword = await bcrypt.hash('cashier123', 10);
+      await db.run(
+        'INSERT INTO users (username, email, password, full_name, role) VALUES (?, ?, ?, ?, ?)',
+        ['cashier', 'cashier@demo.com', cashierPassword, 'Demo Cashier', 'cashier']
+      );
+      cashier = await db.get('SELECT id FROM users WHERE username = ?', ['cashier']);
+      console.log('\n👤 Created demo cashier user (username: cashier, password: cashier123)');
+    } else {
+      console.log('👤 Demo cashier user already exists');
+    }
+
+    // Check if sales already exist
+    const existingSalesCount = await db.get('SELECT COUNT(*) as count FROM sales');
+    if (existingSalesCount && existingSalesCount.count > 0) {
+      console.log(`\n⚠️  Sales data already exists (${existingSalesCount.count} sales), skipping sales creation...`);
+      await db.close();
+      console.log('\n✅ Demo tenant setup completed (using existing data)!');
+      console.log('\n📝 Demo Login Credentials:');
+      console.log('   Tenant Code: DEMO');
+      console.log('   Username: demo');
+      console.log('   Password: demo123');
+      process.exit(0);
+    }
 
     // Insert demo sales (sample transactions)
     console.log('\n💰 Creating sample sales data...');
