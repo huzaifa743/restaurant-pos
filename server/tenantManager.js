@@ -17,49 +17,66 @@ const masterDb = new sqlite3.Database(masterDbPath, (err) => {
     console.error('Error opening master database:', err);
   } else {
     console.log('✅ Connected to master database');
-    initializeMasterDatabase();
+    initializeMasterDatabase().catch(err => {
+      console.error('Error initializing master database:', err);
+    });
   }
 });
 
-// Initialize master database
+// Initialize master database - returns a Promise
 function initializeMasterDatabase() {
-  masterDb.serialize(() => {
-    // Super admins table - stores super admin accounts
-    masterDb.run(`CREATE TABLE IF NOT EXISTS super_admins (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      email TEXT UNIQUE,
-      full_name TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`, (err) => {
-      if (err) {
-        console.error('Error creating super_admins table:', err);
-      }
-    });
+  return new Promise((resolve, reject) => {
+    masterDb.serialize(() => {
+      // Super admins table - stores super admin accounts
+      masterDb.run(`CREATE TABLE IF NOT EXISTS super_admins (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        email TEXT UNIQUE,
+        full_name TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`, (err) => {
+        if (err) {
+          console.error('Error creating super_admins table:', err);
+          reject(err);
+          return;
+        }
+      });
 
-    // Tenants table - stores information about each restaurant/tenant
-    masterDb.run(`CREATE TABLE IF NOT EXISTS tenants (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      tenant_code TEXT UNIQUE NOT NULL,
-      restaurant_name TEXT NOT NULL,
-      owner_name TEXT NOT NULL,
-      owner_email TEXT UNIQUE NOT NULL,
-      owner_phone TEXT,
-      username TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      status TEXT DEFAULT 'active',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`, (err) => {
-      if (err) {
-        console.error('Error creating tenants table:', err);
-      } else {
-        console.log('✅ Master database initialized');
-      }
+      // Tenants table - stores information about each restaurant/tenant
+      masterDb.run(`CREATE TABLE IF NOT EXISTS tenants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_code TEXT UNIQUE NOT NULL,
+        restaurant_name TEXT NOT NULL,
+        owner_name TEXT NOT NULL,
+        owner_email TEXT UNIQUE NOT NULL,
+        owner_phone TEXT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        status TEXT DEFAULT 'active',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`, (err) => {
+        if (err) {
+          console.error('Error creating tenants table:', err);
+          reject(err);
+        } else {
+          console.log('✅ Master database initialized');
+          resolve();
+        }
+      });
     });
   });
+}
+
+// Ensure database is initialized before use
+let initPromise = null;
+function ensureInitialized() {
+  if (!initPromise) {
+    initPromise = initializeMasterDatabase();
+  }
+  return initPromise;
 }
 
 // Get tenant database path
@@ -304,5 +321,7 @@ module.exports = {
   getTenantDatabase,
   createDbHelpers,
   getTenantDbPath,
-  tenantsDir
+  tenantsDir,
+  ensureInitialized,
+  initializeMasterDatabase
 };

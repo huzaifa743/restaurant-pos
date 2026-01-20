@@ -1,8 +1,13 @@
 const bcrypt = require('bcryptjs');
-const { masterDbHelpers } = require('./tenantManager');
+const { masterDbHelpers, ensureInitialized } = require('./tenantManager');
 
 async function setupSuperAdmin() {
   try {
+    // Ensure database tables are initialized first
+    console.log('Initializing master database...');
+    await ensureInitialized();
+    console.log('✅ Master database ready');
+
     const username = process.env.SUPER_ADMIN_USERNAME || 'superadmin';
     const password = process.env.SUPER_ADMIN_PASSWORD || 'superadmin123';
     const email = process.env.SUPER_ADMIN_EMAIL || 'admin@restaurant-pos.com';

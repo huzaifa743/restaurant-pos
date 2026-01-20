@@ -1,8 +1,12 @@
 const bcrypt = require('bcryptjs');
-const { masterDbHelpers, createTenantDatabase, getTenantDatabase, createDbHelpers } = require('./tenantManager');
+const { masterDbHelpers, createTenantDatabase, getTenantDatabase, createDbHelpers, ensureInitialized } = require('./tenantManager');
 
 async function setupDemoTenant() {
   try {
+    // Ensure database tables are initialized first
+    console.log('Initializing master database...');
+    await ensureInitialized();
+    console.log('✅ Master database ready');
     const tenantCode = 'DEMO';
     const restaurantName = 'Demo Restaurant';
     const ownerName = 'Demo Owner';
