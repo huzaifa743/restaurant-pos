@@ -29,12 +29,12 @@ setTimeout(() => {
         console.log('⚠️  Could not check super admin:', err.message);
       }
       
-      // Auto-create demo tenant if it doesn't exist
+      // Auto-create or update demo tenant
       try {
         const demoTenant = await masterDbHelpers.get('SELECT * FROM tenants WHERE tenant_code = ?', ['DEMO']);
+        const { autoSetupDemoTenant } = require('./autoSetupDemo');
         if (!demoTenant) {
           console.log('⚠️  Demo tenant not found. Auto-creating demo tenant with sample data...');
-          const { autoSetupDemoTenant } = require('./autoSetupDemo');
           const result = await autoSetupDemoTenant();
           if (result.success) {
             console.log('✅ Demo tenant auto-created successfully!');
@@ -43,7 +43,13 @@ setTimeout(() => {
             console.log('   Run manually: npm run setup-demo');
           }
         } else {
-          console.log('✅ Demo tenant found');
+          console.log('✅ Demo tenant found, updating settings...');
+          const result = await autoSetupDemoTenant();
+          if (result.success) {
+            console.log('✅ Demo tenant settings updated!');
+          } else {
+            console.log('⚠️  Settings update failed:', result.error);
+          }
         }
       } catch (err) {
         console.log('⚠️  Could not check/create demo tenant:', err.message);

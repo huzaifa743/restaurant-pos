@@ -7,16 +7,32 @@ async function autoSetupDemoTenant() {
     // Ensure database is initialized
     await ensureInitialized();
     
+    const tenantCode = 'DEMO';
+    const restaurantName = 'DEMO POS';
+    
     // Check if demo tenant already exists
     const existing = await masterDbHelpers.get('SELECT * FROM tenants WHERE tenant_code = ?', ['DEMO']);
     if (existing) {
-      return { success: true, message: 'Demo tenant already exists' };
+      console.log('🔄 Demo tenant already exists, updating settings...\n');
+      
+      // Update existing demo tenant settings
+      try {
+        const tenantDb = await getTenantDatabase(tenantCode);
+        const db = createDbHelpers(tenantDb);
+        
+        // Update settings for demo restaurant
+        console.log('⚙️  Updating demo restaurant settings...');
+        await db.run('INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)', ['restaurant_name', restaurantName]);
+        await db.close();
+        console.log('   ✅ Settings updated to DEMO POS');
+        return { success: true, message: 'Demo tenant settings updated' };
+      } catch (error) {
+        console.error('❌ Error updating demo tenant settings:', error);
+        return { success: false, error: error.message };
+      }
     }
 
     console.log('🍽️  Auto-creating Demo Tenant...\n');
-
-    const tenantCode = 'DEMO';
-    const restaurantName = 'DEMO POS';
     const ownerName = 'Demo Owner';
     const ownerEmail = 'demo@restaurant.com';
     const ownerPhone = '+1234567890';
@@ -294,7 +310,7 @@ async function autoSetupDemoTenant() {
 
     // Update settings for demo restaurant
     console.log('⚙️  Configuring demo restaurant settings...');
-    await db.run('UPDATE settings SET value = ? WHERE key = ?', [restaurantName, 'restaurant_name']);
+    await db.run('INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)', ['restaurant_name', restaurantName]);
     await db.run('UPDATE settings SET value = ? WHERE key = ?', ['123 Demo Street, Demo City, DC 12345', 'restaurant_address']);
     await db.run('UPDATE settings SET value = ? WHERE key = ?', ['+1 (555) 123-4567', 'restaurant_phone']);
     await db.run('UPDATE settings SET value = ? WHERE key = ?', [ownerEmail, 'restaurant_email']);
