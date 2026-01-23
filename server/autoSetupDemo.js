@@ -16,7 +16,7 @@ async function autoSetupDemoTenant() {
     console.log('🍽️  Auto-creating Demo Tenant...\n');
 
     const tenantCode = 'DEMO';
-    const restaurantName = 'Demo Pos';
+    const restaurantName = 'DEMO POS';
     const ownerName = 'Demo Owner';
     const ownerEmail = 'demo@restaurant.com';
     const ownerPhone = '+1234567890';
