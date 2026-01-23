@@ -62,7 +62,7 @@ router.get('/', async (req, res) => {
       } catch (error) {
         // If tenant database doesn't exist, return empty/default settings
         return res.json({
-          restaurant_name: 'Restaurant POS',
+          restaurant_name: 'NFM POS',
           restaurant_logo: '',
           currency: 'USD',
           language: 'en',
@@ -73,7 +73,7 @@ router.get('/', async (req, res) => {
     
     // Default settings (for backward compatibility)
     res.json({
-      restaurant_name: 'Restaurant POS',
+      restaurant_name: 'NFM POS',
       restaurant_logo: '',
       currency: 'USD',
       language: 'en',

@@ -23,7 +23,7 @@ export default function LoadingScreen() {
         {settings?.restaurant_logo ? (
           <img
             src={getImageURL(settings.restaurant_logo)}
-            alt={settings.restaurant_name || 'Restaurant Logo'}
+            alt={settings.restaurant_name || 'POS Logo'}
             className="max-w-[200px] max-h-[150px] w-auto h-auto object-contain mb-4 animate-pulse"
             onError={(e) => {
               e.target.style.display = 'none';
@@ -36,11 +36,9 @@ export default function LoadingScreen() {
             <span className="text-white text-2xl font-bold">POS</span>
           </div>
         )}
-        {settings?.restaurant_name && (
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            {settings.restaurant_name}
-          </h2>
-        )}
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          POS
+        </h2>
         <div className="flex items-center gap-2 mt-4">
           <div className="w-2 h-2 bg-primary-600 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
           <div className="w-2 h-2 bg-primary-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>

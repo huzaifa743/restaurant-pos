@@ -171,7 +171,7 @@ export default function ReceiptPrint({ sale, onClose, onPrint }) {
                   />
                 </div>
               )}
-              <h1 className="receipt-title">{settings.restaurant_name || 'Restaurant POS'}</h1>
+              <h1 className="receipt-title">{settings.restaurant_name || 'NFM POS'}</h1>
               {settings.restaurant_address && (
                 <p className="receipt-address">{settings.restaurant_address}</p>
               )}

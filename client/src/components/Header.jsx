@@ -75,7 +75,7 @@ export default function Header({ onMenuToggle, isMenuOpen }) {
             </div>
           )}
           <h2 className="text-xl font-bold text-white truncate">
-            {settings.restaurant_name || 'Restaurant POS'}
+            {settings.restaurant_name || 'POS'}
           </h2>
         </div>
 

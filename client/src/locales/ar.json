@@ -99,8 +99,8 @@
   },
   "settings": {
     "title": "الإعدادات",
-    "restaurantInfo": "معلومات المطعم",
-    "restaurantName": "اسم المطعم",
+    "restaurantInfo": "معلومات العمل",
+    "restaurantName": "اسم العمل",
     "restaurantLogo": "شعار المطعم",
     "restaurantAddress": "عنوان المطعم",
     "restaurantPhone": "هاتف المطعم",

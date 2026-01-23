@@ -13,7 +13,7 @@ export const useSettings = () => {
 
 export const SettingsProvider = ({ children }) => {
   const [settings, setSettings] = useState({
-    restaurant_name: 'Restaurant POS',
+    restaurant_name: 'NFM POS',
     restaurant_logo: '',
     restaurant_address: '',
     restaurant_phone: '',

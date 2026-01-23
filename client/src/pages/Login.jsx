@@ -33,7 +33,7 @@ export default function Login() {
             <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-100 rounded-full mb-3">
               <ShoppingCart className="w-6 h-6 text-primary-600" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-800">Restaurant POS</h1>
+            <h1 className="text-2xl font-bold text-gray-800">POS</h1>
             <p className="text-sm text-gray-600 mt-1">Point of Sale System</p>
           </div>
 

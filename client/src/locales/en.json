@@ -99,8 +99,8 @@
   },
   "settings": {
     "title": "Settings",
-    "restaurantInfo": "Restaurant Information",
-    "restaurantName": "Restaurant Name",
+    "restaurantInfo": "Business Information",
+    "restaurantName": "Business Name",
     "restaurantLogo": "Restaurant Logo",
     "restaurantAddress": "Restaurant Address",
     "restaurantPhone": "Restaurant Phone",
