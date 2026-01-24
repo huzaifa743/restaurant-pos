@@ -5,6 +5,7 @@ import { getImageURL } from '../utils/api';
 import api from '../api/api';
 import toast from 'react-hot-toast';
 import { Plus, Search, Edit, Trash2, X, Folder } from 'lucide-react';
+import ProductModal from '../components/ProductModal';
 
 export default function Inventory() {
   const { t } = useTranslation();
@@ -18,16 +19,6 @@ export default function Inventory() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const [productForm, setProductForm] = useState({
-    name: '',
-    price: '',
-    category_id: '',
-    description: '',
-    image: null,
-    add_expiry_date: false,
-    expiry_date: '',
-  });
 
   const [categoryForm, setCategoryForm] = useState({
     name: '',
@@ -65,55 +56,6 @@ export default function Inventory() {
     }
   };
 
-  const handleProductSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!productForm.name || !productForm.price) {
-      toast.error(t('inventory.nameRequired') + ' and ' + t('inventory.priceRequired'));
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append('name', productForm.name);
-      formData.append('price', productForm.price);
-      formData.append('category_id', productForm.category_id || '');
-      formData.append('description', productForm.description || '');
-      if (productForm.image) {
-        formData.append('image', productForm.image);
-      }
-      formData.append('expiry_date', productForm.add_expiry_date && productForm.expiry_date ? productForm.expiry_date : '');
-
-      if (editingProduct) {
-        await api.put(`/products/${editingProduct.id}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        toast.success('Product updated successfully');
-      } else {
-        await api.post('/products', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        toast.success('Product added successfully');
-      }
-
-      setShowProductModal(false);
-      setEditingProduct(null);
-      setProductForm({
-        name: '',
-        price: '',
-        category_id: '',
-        description: '',
-        image: null,
-        add_expiry_date: false,
-        expiry_date: '',
-      });
-      fetchProducts();
-    } catch (error) {
-      console.error('Error saving product:', error);
-      toast.error(error.response?.data?.error || 'Failed to save product');
-    }
-  };
-
   const handleCategorySubmit = async (e) => {
     e.preventDefault();
 
@@ -141,15 +83,6 @@ export default function Inventory() {
 
   const handleEdit = (product) => {
     setEditingProduct(product);
-    setProductForm({
-      name: product.name,
-      price: product.price,
-      category_id: product.category_id || '',
-      description: product.description || '',
-      image: null,
-      add_expiry_date: !!product.expiry_date,
-      expiry_date: product.expiry_date || '',
-    });
     setShowProductModal(true);
   };
 
@@ -183,16 +116,6 @@ export default function Inventory() {
           <button
             onClick={() => {
               setEditingProduct(null);
-              setProductForm({
-                name: '',
-                price: '',
-                category_id: selectedCategory !== 'all' ? selectedCategory : '',
-                description: '',
-                stock_quantity: 0,
-                image: null,
-                add_expiry_date: false,
-                expiry_date: '',
-              });
               setShowProductModal(true);
             }}
             className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
@@ -317,181 +240,17 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* Product Modal */}
-      {showProductModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">
-                {editingProduct ? t('inventory.editProduct') : t('inventory.addProduct')}
-              </h2>
-              <button
-                onClick={() => {
-                  setShowProductModal(false);
-                  setEditingProduct(null);
-                  setProductForm({
-                    name: '',
-                    price: '',
-                    category_id: '',
-                    description: '',
-                    image: null,
-                    add_expiry_date: false,
-                    expiry_date: '',
-                  });
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleProductSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('inventory.productName')} *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={productForm.name}
-                  onChange={(e) =>
-                    setProductForm({ ...productForm, name: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('inventory.productPrice')} *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    step="0.01"
-                    min="0"
-                    value={productForm.price}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, price: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('inventory.category')}
-                  </label>
-                  <select
-                    value={productForm.category_id}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, category_id: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('inventory.image')}
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    setProductForm({ ...productForm, image: e.target.files[0] })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('inventory.description')}
-                </label>
-                <textarea
-                  value={productForm.description}
-                  onChange={(e) =>
-                    setProductForm({ ...productForm, description: e.target.value })
-                  }
-                  rows="3"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={productForm.add_expiry_date}
-                    onChange={(e) =>
-                      setProductForm({
-                        ...productForm,
-                        add_expiry_date: e.target.checked,
-                        ...(e.target.checked ? {} : { expiry_date: '' }),
-                      })
-                    }
-                    className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Add Expiry Date</span>
-                </label>
-                {productForm.add_expiry_date && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
-                      Expiry Date
-                    </label>
-                    <input
-                      type="date"
-                      value={productForm.expiry_date}
-                      onChange={(e) =>
-                        setProductForm({ ...productForm, expiry_date: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowProductModal(false);
-                    setEditingProduct(null);
-                    setProductForm({
-                      name: '',
-                      price: '',
-                      category_id: '',
-                      description: '',
-                      image: null,
-                      add_expiry_date: false,
-                      expiry_date: '',
-                    });
-                  }}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                >
-                  {t('common.cancel')}
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                >
-                  {t('common.save')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ProductModal
+        open={showProductModal}
+        onClose={() => {
+          setShowProductModal(false);
+          setEditingProduct(null);
+        }}
+        categories={categories}
+        editingProduct={editingProduct}
+        initialCategoryId={selectedCategory !== 'all' ? selectedCategory : undefined}
+        onSuccess={() => fetchProducts()}
+      />
 
       {/* Category Modal */}
       {showCategoryModal && (

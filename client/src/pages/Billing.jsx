@@ -11,7 +11,6 @@ import {
   Trash2,
   Search,
   ShoppingCart,
-  X,
   UserPlus,
   Tag,
   FileText,
@@ -22,6 +21,7 @@ import CustomerModal from '../components/CustomerModal';
 import ReceiptPrint from '../components/ReceiptPrint';
 import DiscountModal from '../components/DiscountModal';
 import VATModal from '../components/VATModal';
+import ProductModal from '../components/ProductModal';
 
 export default function Billing() {
   const { t } = useTranslation();
@@ -47,11 +47,6 @@ export default function Billing() {
   const [completedSale, setCompletedSale] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
-  const [addProductForm, setAddProductForm] = useState({
-    name: '',
-    price: '',
-    category_id: '',
-  });
 
   useEffect(() => {
     fetchProducts();
@@ -89,47 +84,6 @@ export default function Billing() {
       setCategories(response.data);
     } catch (error) {
       console.error('Error fetching categories:', error);
-    }
-  };
-
-  const handleAddProductInput = (field, value) => {
-    setAddProductForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleAddProductSubmit = async (e) => {
-    e.preventDefault();
-    if (!addProductForm.name?.trim() || !addProductForm.price) {
-      toast.error('Name and price are required');
-      return;
-    }
-    const price = parseFloat(addProductForm.price);
-    if (isNaN(price) || price < 0) {
-      toast.error('Enter a valid price');
-      return;
-    }
-    try {
-      const formData = new FormData();
-      formData.append('name', addProductForm.name.trim());
-      formData.append('price', String(price));
-      formData.append('category_id', addProductForm.category_id || '');
-      const response = await api.post('/products', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      const product = response.data;
-      addToCart({
-        id: product.id,
-        name: product.name,
-        image: product.image,
-        category_name: product.category_name || '',
-        price: parseFloat(product.price),
-      }, true);
-      await fetchProducts();
-      setShowAddProductModal(false);
-      setAddProductForm({ name: '', price: '', category_id: '' });
-      toast.success('Product added and placed in cart');
-    } catch (error) {
-      console.error('Add product error:', error);
-      toast.error(error.response?.data?.error || 'Failed to add product');
     }
   };
 
@@ -682,82 +636,28 @@ export default function Billing() {
         />
       )}
 
-      {showAddProductModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-800">Add product</h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAddProductModal(false);
-                  setAddProductForm({ name: '', price: '', category_id: '' });
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleAddProductSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                <input
-                  type="text"
-                  value={addProductForm.name}
-                  onChange={(e) => handleAddProductInput('name', e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  placeholder="Product name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={addProductForm.price}
-                  onChange={(e) => handleAddProductInput('price', e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  placeholder="0.00"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={addProductForm.category_id}
-                  onChange={(e) => handleAddProductInput('category_id', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">None</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                >
-                  Add and add to cart
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddProductModal(false);
-                    setAddProductForm({ name: '', price: '', category_id: '' });
-                  }}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ProductModal
+        open={showAddProductModal}
+        onClose={() => setShowAddProductModal(false)}
+        categories={categories}
+        editingProduct={null}
+        suppressToast
+        submitLabel="Add and add to cart"
+        onSuccess={(product) => {
+          addToCart(
+            {
+              id: product.id,
+              name: product.name,
+              image: product.image,
+              category_name: product.category_name || '',
+              price: parseFloat(product.price),
+            },
+            true
+          );
+          fetchProducts();
+          toast.success('Product added and placed in cart');
+        }}
+      />
     </div>
   );
 }
