@@ -46,6 +46,12 @@ export default function Billing() {
   const [showReceipt, setShowReceipt] = useState(false);
   const [completedSale, setCompletedSale] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [addProductForm, setAddProductForm] = useState({
+    name: '',
+    price: '',
+    category_id: '',
+  });
 
   useEffect(() => {
     fetchProducts();
@@ -86,7 +92,48 @@ export default function Billing() {
     }
   };
 
-  const addToCart = (product) => {
+  const handleAddProductInput = (field, value) => {
+    setAddProductForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddProductSubmit = async (e) => {
+    e.preventDefault();
+    if (!addProductForm.name?.trim() || !addProductForm.price) {
+      toast.error('Name and price are required');
+      return;
+    }
+    const price = parseFloat(addProductForm.price);
+    if (isNaN(price) || price < 0) {
+      toast.error('Enter a valid price');
+      return;
+    }
+    try {
+      const formData = new FormData();
+      formData.append('name', addProductForm.name.trim());
+      formData.append('price', String(price));
+      formData.append('category_id', addProductForm.category_id || '');
+      const response = await api.post('/products', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const product = response.data;
+      addToCart({
+        id: product.id,
+        name: product.name,
+        image: product.image,
+        category_name: product.category_name || '',
+        price: parseFloat(product.price),
+      }, true);
+      await fetchProducts();
+      setShowAddProductModal(false);
+      setAddProductForm({ name: '', price: '', category_id: '' });
+      toast.success('Product added and placed in cart');
+    } catch (error) {
+      console.error('Add product error:', error);
+      toast.error(error.response?.data?.error || 'Failed to add product');
+    }
+  };
+
+  const addToCart = (product, silent = false) => {
     const existingItem = cart.find((item) => item.product_id === product.id);
 
     if (existingItem) {
@@ -99,13 +146,13 @@ export default function Billing() {
           product_id: product.id,
           product_name: product.name,
           product_image: product.image,
-          category_name: product.category_name,
+          category_name: product.category_name || '',
           unit_price: parseFloat(product.price),
           quantity: 1,
           total_price: parseFloat(product.price),
         },
       ]);
-      toast.success('Product added to cart');
+      if (!silent) toast.success('Product added to cart');
     }
   };
 
@@ -469,15 +516,25 @@ export default function Billing() {
             </select>
             
             {/* Search Product - Right Side */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder={t('billing.searchProduct')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              />
+            <div className="flex-1 relative flex items-center gap-2">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder={t('billing.searchProduct')}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddProductModal(true)}
+                className="flex-shrink-0 w-11 h-11 flex items-center justify-center bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors border border-primary-600"
+                title="Add product"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </div>
@@ -623,6 +680,83 @@ export default function Billing() {
             toast.success(vatData.noVat ? 'VAT removed' : 'VAT applied successfully');
           }}
         />
+      )}
+
+      {showAddProductModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Add product</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddProductModal(false);
+                  setAddProductForm({ name: '', price: '', category_id: '' });
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleAddProductSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={addProductForm.name}
+                  onChange={(e) => handleAddProductInput('name', e.target.value)}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  placeholder="Product name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={addProductForm.price}
+                  onChange={(e) => handleAddProductInput('price', e.target.value)}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  value={addProductForm.category_id}
+                  onChange={(e) => handleAddProductInput('category_id', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">None</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                >
+                  Add and add to cart
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddProductModal(false);
+                    setAddProductForm({ name: '', price: '', category_id: '' });
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
