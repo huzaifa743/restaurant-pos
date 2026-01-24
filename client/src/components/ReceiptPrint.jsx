@@ -1,11 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../contexts/SettingsContext';
+import { useAuth } from '../contexts/AuthContext';
 import { getImageURL } from '../utils/api';
 import { X, Printer } from 'lucide-react';
 
 export default function ReceiptPrint({ sale, onClose, onPrint }) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const { settings, formatCurrency } = useSettings();
+  const companyName = user?.tenant_code === 'DEMO' ? 'DEMO POS' : (settings.restaurant_name || 'NFM POS');
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -171,7 +174,7 @@ export default function ReceiptPrint({ sale, onClose, onPrint }) {
                   />
                 </div>
               )}
-              <h1 className="receipt-title">{settings.restaurant_name || 'NFM POS'}</h1>
+              <h1 className="receipt-title">{companyName}</h1>
               {settings.restaurant_address && (
                 <p className="receipt-address">{settings.restaurant_address}</p>
               )}
@@ -268,7 +271,7 @@ export default function ReceiptPrint({ sale, onClose, onPrint }) {
             {/* Footer */}
             <div className="receipt-footer">
               <div className="receipt-divider"></div>
-              <p className="receipt-thanks">THANKS FOR COMING {settings.restaurant_name?.toUpperCase() || 'RESTAURANT'}</p>
+              <p className="receipt-thanks">THANKS FOR COMING {companyName?.toUpperCase() || 'POS'}</p>
               <p className="receipt-nice-day">Have a nice day!</p>
               <div className="receipt-divider"></div>
             </div>
