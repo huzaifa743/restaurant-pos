@@ -2,14 +2,19 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-// Use DATA_DIR for persistent storage (e.g. Railway volume). Tenants persist across redeploys.
-const dataDir = process.env.DATA_DIR || __dirname;
+// Persistent storage: DATA_DIR, or Railway volume path, or project dir (ephemeral – tenants lost on redeploy).
+const dataDir = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
 const masterDbPath = path.join(dataDir, 'master.db');
 const tenantsDir = path.join(dataDir, 'tenants');
+const isPersistent = dataDir !== __dirname;
 
-if (dataDir !== __dirname) {
+if (isPersistent) {
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-  console.log('✅ Using persistent DATA_DIR:', dataDir);
+  const src = process.env.DATA_DIR ? 'DATA_DIR' : 'Railway volume';
+  console.log('✅ Persistent storage:', dataDir, `(${src})`);
+} else {
+  console.warn('\n⚠️  TENANTS WILL BE LOST ON REDEPLOY: No persistent storage configured.');
+  console.warn('   Add a Railway Volume (mount at /data) + set DATA_DIR=/data, or see PERSISTENCE.md.\n');
 }
 if (!fs.existsSync(tenantsDir)) {
   fs.mkdirSync(tenantsDir, { recursive: true });
