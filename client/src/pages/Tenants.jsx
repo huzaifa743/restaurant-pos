@@ -17,7 +17,8 @@ export default function Tenants() {
     owner_email: '',
     owner_phone: '',
     username: '',
-    password: ''
+    password: '',
+    status: 'active'
   });
 
   useEffect(() => {
@@ -72,9 +73,21 @@ export default function Tenants() {
       owner_email: tenant.owner_email,
       owner_phone: tenant.owner_phone || '',
       username: tenant.username,
-      password: '' // Don't pre-fill password
+      password: '', // Don't pre-fill password
+      status: tenant.status || 'active'
     });
     setShowModal(true);
+  };
+
+  const handleStatusToggle = async (tenant) => {
+    const next = tenant.status === 'active' ? 'inactive' : 'active';
+    try {
+      await api.put(`/tenants/${tenant.id}`, { status: next });
+      toast.success(`Tenant ${next === 'active' ? 'activated' : 'deactivated'}`);
+      fetchTenants();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to update status');
+    }
   };
 
   const handleDelete = async (id) => {
@@ -99,7 +112,8 @@ export default function Tenants() {
       owner_email: '',
       owner_phone: '',
       username: '',
-      password: ''
+      password: '',
+      status: 'active'
     });
     setEditingTenant(null);
   };
@@ -185,11 +199,21 @@ export default function Tenants() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{tenant.username}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    tenant.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {tenant.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      tenant.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {tenant.status}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleStatusToggle(tenant)}
+                      className="text-xs text-primary-600 hover:text-primary-800 font-medium"
+                      title={tenant.status === 'active' ? 'Set inactive (block login)' : 'Set active (allow login)'}
+                    >
+                      {tenant.status === 'active' ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex gap-2">
@@ -311,6 +335,23 @@ export default function Tenants() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                 />
               </div>
+
+              {editingTenant && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="active">Active (users can login)</option>
+                    <option value="inactive">Inactive (users cannot login)</option>
+                  </select>
+                </div>
+              )}
 
               {!editingTenant && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">

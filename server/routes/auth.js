@@ -67,15 +67,21 @@ router.post('/login', async (req, res) => {
 
     if (tenant) {
       // Owner login
+      if (tenant.status === 'inactive' && tenant.activated_at != null) {
+        return res.status(403).json({
+          error: 'Tenant is inactive. Contact super admin to activate.'
+        });
+      }
+
       const validPassword = await bcrypt.compare(password, tenant.password);
       if (!validPassword) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      // First-time owner login: set tenant status to active
-      if (tenant.status === 'inactive') {
+      // First-time activation: owner's first login sets active (only after valid password)
+      if (tenant.status === 'inactive' && tenant.activated_at == null) {
         await masterDbHelpers.run(
-          "UPDATE tenants SET status = 'active', updated_at = CURRENT_TIMESTAMP WHERE tenant_code = ?",
+          "UPDATE tenants SET status = 'active', activated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE tenant_code = ?",
           [tenant.tenant_code]
         );
       }
@@ -104,7 +110,20 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Check tenant database for regular users
+    // Check tenant database for regular users (cashiers, etc.)
+    const tenantMeta = await masterDbHelpers.get(
+      'SELECT status FROM tenants WHERE tenant_code = ?',
+      [tenant_code]
+    );
+    if (!tenantMeta) {
+      return res.status(404).json({ error: `Tenant '${tenant_code}' not found.` });
+    }
+    if (tenantMeta.status !== 'active') {
+      return res.status(403).json({
+        error: 'Tenant is inactive. Contact super admin to activate.'
+      });
+    }
+
     try {
       const tenantDb = await getTenantDatabase(tenant_code);
       const db = createDbHelpers(tenantDb);

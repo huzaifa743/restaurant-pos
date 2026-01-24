@@ -59,16 +59,25 @@ function initializeMasterDatabase() {
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         status TEXT DEFAULT 'active',
+        activated_at DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`, (err) => {
         if (err) {
           console.error('Error creating tenants table:', err);
           reject(err);
-        } else {
+          return;
+        }
+        // Migrate existing DBs: add activated_at if missing
+        masterDb.run('ALTER TABLE tenants ADD COLUMN activated_at DATETIME', (err2) => {
+          if (err2 && !/duplicate column name/i.test(err2.message)) {
+            console.error('Error adding activated_at:', err2);
+            reject(err2);
+            return;
+          }
           console.log('✅ Master database initialized');
           resolve();
-        }
+        });
       });
     });
   });
