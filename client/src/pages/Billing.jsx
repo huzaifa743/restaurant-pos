@@ -267,9 +267,9 @@ export default function Billing() {
   const { subtotal, discount, vat, total } = calculateTotals();
 
   return (
-    <div className="flex h-full gap-6">
-      {/* Cart Section - Left Side */}
-      <div className="w-96 bg-white rounded-lg shadow-md border border-gray-200 flex flex-col">
+    <div className="flex flex-1 min-h-0 overflow-hidden gap-6">
+      {/* Cart Section - Left Side - Stays fixed */}
+      <div className="w-96 flex-shrink-0 bg-white rounded-lg shadow-md border border-gray-200 flex flex-col min-h-0 overflow-hidden">
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -293,7 +293,7 @@ export default function Billing() {
         </div>
 
         {/* Cart Items */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4">
           {cart.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
               {t('billing.emptyCart')}
@@ -457,9 +457,9 @@ export default function Billing() {
         </div>
       </div>
 
-      {/* Products Section - Right Side */}
-      <div className="flex-1 bg-white rounded-lg shadow-md border border-gray-200 p-6">
-        <div className="mb-6">
+      {/* Products Section - Right Side - Scrolls only */}
+      <div className="flex-1 min-h-0 flex flex-col bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+        <div className="flex-shrink-0 p-6 pb-0">
           <div className="flex gap-4 mb-4">
             {/* Category Selection - Left Side, Bigger */}
             <select
@@ -489,8 +489,8 @@ export default function Billing() {
           </div>
         </div>
 
-        {/* Products Grid */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Products Grid - Only this scrolls */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-6 pt-4">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
