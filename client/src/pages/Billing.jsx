@@ -36,7 +36,6 @@ export default function Billing() {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [showVATModal, setShowVATModal] = useState(false);
-  const [orderType, setOrderType] = useState('dine-in');
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountType, setDiscountType] = useState('fixed');
   // Initialize VAT from settings and persist across sales
@@ -187,13 +186,7 @@ export default function Billing() {
         payment_method: paymentData.method,
         payment_amount: paymentData.amount,
         change_amount: paymentData.change || 0,
-        order_type: paymentData.orderType || orderType,
       };
-      
-      // Update orderType state if changed in modal
-      if (paymentData.orderType) {
-        setOrderType(paymentData.orderType);
-      }
 
       const response = await api.post('/sales', saleData);
       setCompletedSale(response.data);
@@ -584,7 +577,6 @@ export default function Billing() {
       {showCheckoutModal && (
         <CheckoutModal
           total={total}
-          orderType={orderType}
           onClose={() => setShowCheckoutModal(false)}
           onConfirm={handlePayment}
         />

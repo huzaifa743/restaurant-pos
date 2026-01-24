@@ -56,16 +56,6 @@ export default function ReceiptPrint({ sale, onClose, onPrint }) {
     }
     return `${prefix}${shortNumber}`;
   };
-  
-  const formatOrderType = (orderType) => {
-    if (!orderType) return '';
-    const typeMap = {
-      'dine-in': 'Dine In Token',
-      'takeaway': 'Takeaway Token',
-      'delivery': 'Delivery Token'
-    };
-    return typeMap[orderType] || orderType.charAt(0).toUpperCase() + orderType.slice(1) + ' Token';
-  };
 
   const formatFullDateTime = (dateString) => {
     if (!dateString) return '';

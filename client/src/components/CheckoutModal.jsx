@@ -3,13 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useSettings } from '../contexts/SettingsContext';
 import { X } from 'lucide-react';
 
-export default function CheckoutModal({ total, onClose, onConfirm, orderType: initialOrderType = 'dine-in' }) {
+export default function CheckoutModal({ total, onClose, onConfirm }) {
   const { t } = useTranslation();
   const { formatCurrency } = useSettings();
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentAmount, setPaymentAmount] = useState(total);
   const [customAmount, setCustomAmount] = useState('');
-  const [orderType, setOrderType] = useState(initialOrderType);
 
   const quickAmounts = [10, 20, 50, 100, 200, 500];
 
@@ -30,7 +29,6 @@ export default function CheckoutModal({ total, onClose, onConfirm, orderType: in
       method: paymentMethod,
       amount: paymentAmount,
       change: changeAmount > 0 ? changeAmount : 0,
-      orderType: orderType,
     });
   };
 
@@ -48,22 +46,6 @@ export default function CheckoutModal({ total, onClose, onConfirm, orderType: in
         </div>
 
         <div className="mb-6">
-          {/* Order Type - First */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {t('billing.orderType')}
-            </label>
-            <select
-              value={orderType}
-              onChange={(e) => setOrderType(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white"
-            >
-              <option value="dine-in">{t('billing.dineIn')}</option>
-              <option value="takeaway">{t('billing.takeaway')}</option>
-              <option value="delivery">{t('billing.delivery')}</option>
-            </select>
-          </div>
-
           <div className="bg-gray-50 rounded-lg p-4 mb-4">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">{t('billing.total')}:</span>
