@@ -21,8 +21,15 @@ export default function Reports() {
   const { t } = useTranslation();
   const { formatCurrency } = useSettings();
   const [reportType, setReportType] = useState('sales');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  
+  // Set default dates to today
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+  
+  const [startDate, setStartDate] = useState(getTodayDate());
+  const [endDate, setEndDate] = useState(getTodayDate());
   const [paymentMethod, setPaymentMethod] = useState('');
   const [orderType, setOrderType] = useState('');
   const [salesReport, setSalesReport] = useState(null);
@@ -30,6 +37,7 @@ export default function Reports() {
   const [usersReport, setUsersReport] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Fetch reports on mount and when filters change
   useEffect(() => {
     if (startDate && endDate) {
       fetchReports();
