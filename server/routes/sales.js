@@ -125,15 +125,23 @@ router.post('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, a
 
     // Create sale items
     for (const item of items) {
+      const quantity = parseFloat(item.quantity) || 0;
+      const unitPrice = parseFloat(item.unit_price) || 0;
+      const totalPrice = parseFloat(item.total_price) || 0;
+
+      if (!item.product_id || !item.product_name) {
+        throw new Error('Invalid item: product_id and product_name are required');
+      }
+
       await req.db.run(
         'INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, total_price) VALUES (?, ?, ?, ?, ?, ?)',
         [
           saleResult.id,
           item.product_id,
           item.product_name,
-          item.quantity,
-          parseFloat(item.unit_price),
-          parseFloat(item.total_price)
+          quantity,
+          unitPrice,
+          totalPrice
         ]
       );
 
@@ -141,7 +149,7 @@ router.post('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, a
       if (item.product_id) {
         const product = await req.db.get('SELECT stock_tracking_enabled FROM products WHERE id = ?', [item.product_id]);
         if (product && (product.stock_tracking_enabled === 1 || product.stock_tracking_enabled === true)) {
-          await req.db.run('UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?', [item.quantity, item.product_id]);
+          await req.db.run('UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?', [quantity, item.product_id]);
         }
       }
     }
@@ -160,6 +168,8 @@ router.post('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, a
     res.status(201).json({ ...sale, items: saleItems });
   } catch (error) {
     console.error('Create sale error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Request body:', JSON.stringify(req.body, null, 2));
     const errorMessage = error.message || 'Server error';
     res.status(500).json({ error: errorMessage });
   }

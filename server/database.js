@@ -143,7 +143,7 @@ function initializeDatabase() {
       if (err) console.error('Error creating sales table:', err);
     });
 
-    // Sale items table
+    // Sale items table - quantity is REAL to support decimal quantities
     db.run(`CREATE TABLE IF NOT EXISTS sale_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       sale_id INTEGER NOT NULL,
@@ -156,55 +156,6 @@ function initializeDatabase() {
       FOREIGN KEY (product_id) REFERENCES products(id)
     )`, (err) => {
       if (err) console.error('Error creating sale_items table:', err);
-    });
-
-    // Held sales table
-    db.run(`CREATE TABLE IF NOT EXISTS held_sales (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      hold_number TEXT UNIQUE NOT NULL,
-      customer_id INTEGER,
-      user_id INTEGER NOT NULL,
-      subtotal REAL NOT NULL,
-      discount_amount REAL DEFAULT 0,
-      discount_type TEXT DEFAULT 'fixed',
-      vat_percentage REAL DEFAULT 0,
-      vat_amount REAL DEFAULT 0,
-      total REAL NOT NULL,
-      notes TEXT,
-      cart_data TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (customer_id) REFERENCES customers(id),
-      FOREIGN KEY (user_id) REFERENCES users(id)
-    )`, (err) => {
-      if (err) console.error('Error creating held_sales table:', err);
-    });
-
-    // Price override history table
-    db.run(`CREATE TABLE IF NOT EXISTS price_override_history (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      product_id INTEGER NOT NULL,
-      product_name TEXT NOT NULL,
-      original_price REAL NOT NULL,
-      override_price REAL NOT NULL,
-      user_id INTEGER NOT NULL,
-      username TEXT,
-      sale_id INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (product_id) REFERENCES products(id),
-      FOREIGN KEY (user_id) REFERENCES users(id)
-    )`, (err) => {
-      if (err) console.error('Error creating price_override_history table:', err);
-    });
-
-    // Add new columns to sales table if they don't exist
-    db.run(`ALTER TABLE sales ADD COLUMN payment_data TEXT`, (err) => {
-      // Ignore error if column already exists
-    });
-    db.run(`ALTER TABLE sales ADD COLUMN refund_of_sale_id INTEGER`, (err) => {
-      // Ignore error if column already exists
-    });
-    db.run(`ALTER TABLE sales ADD COLUMN refund_reason TEXT`, (err) => {
-      // Ignore error if column already exists
     });
 
     // Settings table

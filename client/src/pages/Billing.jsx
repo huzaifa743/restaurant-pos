@@ -215,26 +215,45 @@ export default function Billing() {
 
   const handlePayment = async (paymentData) => {
     try {
+      if (cart.length === 0) {
+        toast.error('Cart is empty');
+        return;
+      }
+
       const { subtotal, discount, vat, total } = calculateTotals();
+
+      // Validate cart items
+      const validatedItems = cart.map((item) => {
+        if (!item.product_id || !item.product_name) {
+          throw new Error(`Invalid item: missing product information`);
+        }
+        if (!item.quantity || item.quantity <= 0) {
+          throw new Error(`Invalid quantity for ${item.product_name}`);
+        }
+        if (!item.unit_price || item.unit_price < 0) {
+          throw new Error(`Invalid price for ${item.product_name}`);
+        }
+        return {
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: parseFloat(item.quantity),
+          unit_price: parseFloat(item.unit_price),
+          total_price: parseFloat(item.total_price),
+        };
+      });
 
       const saleData = {
         customer_id: selectedCustomer?.id || null,
-        items: cart.map((item) => ({
-          product_id: item.product_id,
-          product_name: item.product_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-        })),
-        subtotal,
-        discount_amount: discount,
+        items: validatedItems,
+        subtotal: parseFloat(subtotal),
+        discount_amount: parseFloat(discount),
         discount_type: discountType,
-        vat_percentage: noVat ? 0 : vatPercentage,
-        vat_amount: vat,
-        total,
+        vat_percentage: noVat ? 0 : parseFloat(vatPercentage),
+        vat_amount: parseFloat(vat),
+        total: parseFloat(total),
         payment_method: paymentData.method,
-        payment_amount: paymentData.amount,
-        change_amount: paymentData.change || 0,
+        payment_amount: parseFloat(paymentData.amount),
+        change_amount: parseFloat(paymentData.change || 0),
       };
 
       const response = await api.post('/sales', saleData);
@@ -681,21 +700,27 @@ export default function Billing() {
         <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50">
           <div className="flex gap-2">
             <button
-              onClick={() => toast('Hold Sale feature coming soon')}
+              onClick={() => {
+                toast.success('Hold Sale feature coming soon');
+              }}
               className="flex-1 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
             >
               <Save className="w-4 h-4" />
               Hold Sale
             </button>
             <button
-              onClick={() => toast('View Hold Sale feature coming soon')}
+              onClick={() => {
+                toast.success('View Hold Sale feature coming soon');
+              }}
               className="flex-1 px-4 py-2.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
             >
               <Eye className="w-4 h-4" />
               View Hold Sale
             </button>
             <button
-              onClick={() => toast('Split Payment feature coming soon')}
+              onClick={() => {
+                toast.success('Split Payment feature coming soon');
+              }}
               className="flex-1 px-4 py-2.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
             >
               <CreditCard className="w-4 h-4" />
