@@ -55,6 +55,25 @@ export default function Dashboard() {
     }
   };
 
+  // Format payment method name for display
+  const formatPaymentMethod = (method) => {
+    if (!method) return 'Unknown';
+    // Convert camelCase to Title Case and handle common payment methods
+    const methodMap = {
+      'cash': 'Cash',
+      'card': 'Card',
+      'online': 'Online',
+      'payAfterDelivery': 'Pay After Delivery'
+    };
+    if (methodMap[method]) {
+      return methodMap[method];
+    }
+    return method
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, str => str.toUpperCase())
+      .trim();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -167,8 +186,8 @@ export default function Dashboard() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) =>
-                  `${name} ${(percent * 100).toFixed(0)}%`
+                label={({ payment_method, percent }) =>
+                  `${formatPaymentMethod(payment_method)} ${(percent * 100).toFixed(0)}%`
                 }
                 outerRadius={80}
                 fill="#8884d8"
@@ -181,7 +200,12 @@ export default function Dashboard() {
                   />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip 
+                formatter={(value, name, props) => [
+                  formatCurrency(value),
+                  formatPaymentMethod(props.payload.payment_method)
+                ]}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
