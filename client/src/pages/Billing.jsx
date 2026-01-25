@@ -72,8 +72,11 @@ export default function Billing() {
       const response = await api.get('/products', { params });
       setProducts(response.data);
     } catch (error) {
-      console.error('Error fetching products:', error);
-      toast.error('Failed to load products');
+      const errorMessage = error.response?.data?.error || error.message || 'Unknown error';
+      console.error('Error fetching products:', errorMessage, error);
+      if (error.response?.status !== 403) {
+        toast.error('Failed to load products');
+      }
     } finally {
       setLoading(false);
     }
@@ -84,7 +87,8 @@ export default function Billing() {
       const response = await api.get('/categories');
       setCategories(response.data);
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Unknown error';
+      console.error('Error fetching categories:', errorMessage, error);
     }
   };
 

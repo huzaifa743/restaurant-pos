@@ -37,6 +37,21 @@ api.interceptors.response.use(
           window.location.href = '/login';
         }
       }
+    } else if (error.response?.status === 403) {
+      // Handle 403 Forbidden errors
+      const errorMessage = error.response?.data?.error || 'Access forbidden';
+      console.error('403 Forbidden:', errorMessage, error.config?.url);
+      
+      // If token is invalid or expired, redirect to login
+      if (errorMessage.includes('token') || errorMessage.includes('expired') || errorMessage.includes('Invalid')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      }
+      // For other 403 errors (like insufficient permissions), just log them
+      // Don't redirect as the user might still be valid but just lacks permission
     }
     return Promise.reject(error);
   }
