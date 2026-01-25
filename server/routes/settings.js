@@ -9,10 +9,29 @@ const { getTenantDatabase, createDbHelpers } = require('../tenantManager');
 
 const router = express.Router();
 
+// Get persistent uploads directory path (same logic as database path)
+function getUploadsBasePath() {
+  if (process.env.UPLOADS_DIR) {
+    // Use custom path from environment variable
+    return process.env.UPLOADS_DIR;
+  } else if (process.env.RAILWAY_ENVIRONMENT) {
+    // Railway: Use persistent storage directory
+    const railwayDataPath = process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
+    return path.join(railwayDataPath, 'uploads');
+  } else if (process.env.RENDER && process.env.RENDER_DISK_PATH) {
+    // Use Render persistent disk path if available (paid plans only)
+    return path.join(process.env.RENDER_DISK_PATH, 'uploads');
+  } else {
+    // Default: use server directory (ephemeral on Render free tier, persistent on Railway)
+    return path.join(__dirname, '../uploads');
+  }
+}
+
 // Configure multer for logo upload
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../uploads/settings');
+    const uploadsBasePath = getUploadsBasePath();
+    const uploadPath = path.join(uploadsBasePath, 'settings');
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
@@ -88,7 +107,12 @@ router.get('/', async (req, res) => {
         
         // Verify logo file exists, if not, clear the logo path
         if (settingsObj.restaurant_logo) {
-          const logoFilePath = path.join(__dirname, '..', settingsObj.restaurant_logo);
+          const uploadsBasePath = getUploadsBasePath();
+          // Remove leading slash from logo path for path.join
+          const normalizedLogoPath = settingsObj.restaurant_logo.startsWith('/') 
+            ? settingsObj.restaurant_logo.substring(1) 
+            : settingsObj.restaurant_logo;
+          const logoFilePath = path.join(uploadsBasePath, normalizedLogoPath.replace('uploads/', ''));
           if (!fs.existsSync(logoFilePath)) {
             console.warn('Logo file not found, clearing logo path:', settingsObj.restaurant_logo, 'Expected at:', logoFilePath);
             settingsObj.restaurant_logo = '';
@@ -158,7 +182,8 @@ router.put('/', authenticateToken, requireRole('admin'), preventDemoModification
     // Handle logo upload
     if (req.file) {
       const logoPath = `/uploads/settings/${req.file.filename}`;
-      const fullLogoPath = path.join(__dirname, '../uploads/settings', req.file.filename);
+      const uploadsBasePath = getUploadsBasePath();
+      const fullLogoPath = path.join(uploadsBasePath, 'settings', req.file.filename);
       
       // Verify file was actually saved
       if (!fs.existsSync(fullLogoPath)) {
@@ -171,7 +196,8 @@ router.put('/', authenticateToken, requireRole('admin'), preventDemoModification
       if (oldLogo && oldLogo.value) {
         // Normalize the path - remove leading slash if present for path.join
         const normalizedOldPath = oldLogo.value.startsWith('/') ? oldLogo.value.substring(1) : oldLogo.value;
-        const oldLogoPath = path.join(__dirname, '..', normalizedOldPath);
+        const uploadsBasePath = getUploadsBasePath();
+        const oldLogoPath = path.join(uploadsBasePath, normalizedOldPath.replace('uploads/', ''));
         if (fs.existsSync(oldLogoPath)) {
           try {
             fs.unlinkSync(oldLogoPath);

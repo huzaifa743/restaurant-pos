@@ -101,26 +101,47 @@ app.get('/api/ping', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Server is alive', timestamp: new Date().toISOString() });
 });
 
+// Get persistent uploads directory path (same logic as database path)
+function getUploadsBasePath() {
+  if (process.env.UPLOADS_DIR) {
+    // Use custom path from environment variable
+    return process.env.UPLOADS_DIR;
+  } else if (process.env.RAILWAY_ENVIRONMENT) {
+    // Railway: Use persistent storage directory
+    const railwayDataPath = process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
+    return path.join(railwayDataPath, 'uploads');
+  } else if (process.env.RENDER && process.env.RENDER_DISK_PATH) {
+    // Use Render persistent disk path if available (paid plans only)
+    return path.join(process.env.RENDER_DISK_PATH, 'uploads');
+  } else {
+    // Default: use server directory (ephemeral on Render free tier, persistent on Railway)
+    return path.join(__dirname, 'uploads');
+  }
+}
+
 // Ensure uploads directory exists before serving static files
-const uploadsDir = path.join(__dirname, 'uploads');
-const uploadsSettingsDir = path.join(__dirname, 'uploads', 'settings');
-const uploadsProductsDir = path.join(__dirname, 'uploads', 'products');
+const uploadsBasePath = getUploadsBasePath();
+const uploadsDir = uploadsBasePath;
+const uploadsSettingsDir = path.join(uploadsBasePath, 'settings');
+const uploadsProductsDir = path.join(uploadsBasePath, 'products');
 
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log('✅ Created uploads directory');
+  console.log('✅ Created uploads directory:', uploadsDir);
 }
 if (!fs.existsSync(uploadsSettingsDir)) {
   fs.mkdirSync(uploadsSettingsDir, { recursive: true });
-  console.log('✅ Created uploads/settings directory');
+  console.log('✅ Created uploads/settings directory:', uploadsSettingsDir);
 }
 if (!fs.existsSync(uploadsProductsDir)) {
   fs.mkdirSync(uploadsProductsDir, { recursive: true });
-  console.log('✅ Created uploads/products directory');
+  console.log('✅ Created uploads/products directory:', uploadsProductsDir);
 }
 
+console.log('📁 Uploads directory:', uploadsBasePath);
+
 // Serve static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+app.use('/uploads', express.static(uploadsBasePath, {
   etag: true,
   lastModified: true,
   setHeaders: (res, filePath) => {
