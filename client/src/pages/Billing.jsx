@@ -164,8 +164,8 @@ export default function Billing() {
     setCart(
       cart.map((item) => {
         if (item.id === id) {
-          const newTotal = item.unit_price * quantity;
-          return { ...item, quantity, total_price: newTotal };
+          const newTotal = parseFloat((item.unit_price * quantity).toFixed(2));
+          return { ...item, quantity: parseFloat(quantity.toFixed(2)), total_price: newTotal };
         }
         return item;
       })
@@ -373,16 +373,44 @@ export default function Billing() {
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        onClick={() => {
+                          const newQty = Math.max(0.01, parseFloat((item.quantity - 0.1).toFixed(2)));
+                          updateQuantity(item.id, newQty);
+                        }}
                         className="w-7 h-7 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
                       >
                         <Minus className="w-4 h-4" />
                       </button>
-                      <span className="w-10 text-center font-medium">
-                        {item.quantity}
-                      </span>
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Allow empty input for continuous typing
+                          if (value === '' || value === '.') {
+                            updateQuantity(item.id, 0);
+                            return;
+                          }
+                          const numValue = parseFloat(value);
+                          if (!isNaN(numValue) && numValue >= 0) {
+                            updateQuantity(item.id, numValue);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          // Ensure value is set on blur if empty
+                          const value = parseFloat(e.target.value) || 0.01;
+                          updateQuantity(item.id, Math.max(0.01, value));
+                        }}
+                        className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                        step="0.01"
+                        min="0.01"
+                        placeholder="0.00"
+                      />
                       <button
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => {
+                          const newQty = parseFloat((item.quantity + 0.1).toFixed(2));
+                          updateQuantity(item.id, newQty);
+                        }}
                         className="w-7 h-7 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
                       >
                         <Plus className="w-4 h-4" />
@@ -509,10 +537,14 @@ export default function Billing() {
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="px-5 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white text-base font-bold min-w-[240px]"
+              style={{
+                fontSize: '16px',
+                fontWeight: 'bold'
+              }}
             >
-              <option value="all">{t('billing.allCategories')}</option>
+              <option value="all" style={{ fontSize: '16px', fontWeight: 'bold' }}>{t('billing.allCategories')}</option>
               {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
+                <option key={cat.id} value={cat.id} style={{ fontSize: '16px', fontWeight: 'bold' }}>
                   {cat.name}
                 </option>
               ))}
