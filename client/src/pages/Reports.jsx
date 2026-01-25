@@ -295,6 +295,69 @@ export default function Reports() {
       {/* Product Report */}
       {reportType === 'products' && productReport && (
         <div className="space-y-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+            <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Products</p>
+                  <p className="text-2xl font-bold text-gray-800">
+                    {productReport.summary?.totalProducts || 0}
+                  </p>
+                </div>
+                <BarChart3 className="w-8 h-8 text-primary-600" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Quantity Sold</p>
+                  <p className="text-2xl font-bold text-gray-800">
+                    {productReport.summary?.totalQuantitySold || 0}
+                  </p>
+                </div>
+                <TrendingUp className="w-8 h-8 text-blue-600" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
+                  <p className="text-2xl font-bold text-gray-800">
+                    {formatCurrency(productReport.summary?.totalRevenue || 0)}
+                  </p>
+                </div>
+                <TrendingUp className="w-8 h-8 text-green-600" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Cost</p>
+                  <p className="text-2xl font-bold text-gray-800">
+                    {formatCurrency(productReport.summary?.totalCost || 0)}
+                  </p>
+                </div>
+                <TrendingUp className="w-8 h-8 text-orange-600" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Profit</p>
+                  <p className={`text-2xl font-bold ${(productReport.summary?.totalProfit || 0) > 0 ? 'text-green-600' : (productReport.summary?.totalProfit || 0) < 0 ? 'text-red-600' : 'text-gray-800'}`}>
+                    {formatCurrency(productReport.summary?.totalProfit || 0)}
+                  </p>
+                </div>
+                <TrendingUp className={`w-8 h-8 ${(productReport.summary?.totalProfit || 0) > 0 ? 'text-green-600' : 'text-red-600'}`} />
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">
               {t('reports.productReport')}
@@ -330,7 +393,7 @@ export default function Reports() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {productReport.map((product) => (
+                  {productReport.products?.map((product) => (
                     <tr key={product.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">
                         {product.name}

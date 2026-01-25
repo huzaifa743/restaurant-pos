@@ -92,7 +92,17 @@ router.get('/products', authenticateToken, requireTenant, getTenantDb, closeTena
              ORDER BY total_revenue DESC`;
 
     const products = await req.db.query(sql, params);
-    res.json(products);
+    
+    // Calculate summary
+    const summary = {
+      totalProducts: products.length,
+      totalQuantitySold: products.reduce((sum, p) => sum + (p.total_quantity || 0), 0),
+      totalRevenue: products.reduce((sum, p) => sum + parseFloat(p.total_revenue || 0), 0),
+      totalCost: products.reduce((sum, p) => sum + parseFloat(p.total_cost || 0), 0),
+      totalProfit: products.reduce((sum, p) => sum + parseFloat(p.total_profit || 0), 0)
+    };
+
+    res.json({ products, summary });
   } catch (error) {
     console.error('Product report error:', error);
     res.status(500).json({ error: 'Server error' });
