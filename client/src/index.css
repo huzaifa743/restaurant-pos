@@ -181,7 +181,7 @@ h6 { font-size: 0.875rem; }
 .receipt-spacer-rate {
   width: 50px;
   flex-shrink: 0;
-  padding-right: 3px;
+  padding-right: 8px;
 }
 
 .receipt-spacer-qty {
@@ -257,7 +257,7 @@ h6 { font-size: 0.875rem; }
   text-align: right;
   width: 50px;
   flex-shrink: 0;
-  padding-right: 3px;
+  padding-right: 8px;
 }
 
 .receipt-items-header .item-qty {
@@ -321,7 +321,7 @@ h6 { font-size: 0.875rem; }
   font-weight: 700;
   flex-shrink: 0;
   font-size: 11px;
-  padding-right: 3px;
+  padding-right: 8px;
 }
 
 .item-qty {

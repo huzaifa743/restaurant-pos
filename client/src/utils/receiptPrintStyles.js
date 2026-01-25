@@ -194,7 +194,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
     .receipt-spacer-rate {
       width: 50px;
       flex-shrink: 0;
-      padding-right: 3px;
+      padding-right: 8px;
     }
     
     .receipt-spacer-qty {
@@ -278,7 +278,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
       text-align: right;
       width: 50px;
       flex-shrink: 0;
-      padding-right: 3px;
+      padding-right: 8px;
     }
     
     .receipt-items-header .item-qty {
@@ -341,7 +341,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
       font-weight: 700;
       flex-shrink: 0;
       font-size: 10px;
-      padding-right: 3px;
+      padding-right: 8px;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
