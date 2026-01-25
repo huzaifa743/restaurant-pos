@@ -250,17 +250,25 @@ export default function Billing() {
     }
   };
 
-  const handleSelectHold = (cartData, heldSale) => {
-    setCart(cartData);
-    if (heldSale.customer_id) {
-      // You might want to fetch the full customer object here
-      setSelectedCustomer({ id: heldSale.customer_id, name: heldSale.customer_name });
+  const handleSelectHold = async (cartData, heldSale) => {
+    try {
+      // Load the held sale into cart
+      setCart(cartData);
+      if (heldSale.customer_id) {
+        setSelectedCustomer({ id: heldSale.customer_id, name: heldSale.customer_name });
+      }
+      setDiscountAmount(heldSale.discount_amount || 0);
+      setDiscountType(heldSale.discount_type || 'fixed');
+      setVatPercentage(heldSale.vat_percentage || 0);
+      setNoVat(heldSale.vat_percentage === 0);
+      
+      // Delete the held sale after retrieving it
+      await api.delete(`/held-sales/${heldSale.id}`);
+      toast.success('Held sale loaded and removed from list');
+    } catch (error) {
+      console.error('Error loading held sale:', error);
+      toast.error('Failed to load held sale');
     }
-    setDiscountAmount(heldSale.discount_amount || 0);
-    setDiscountType(heldSale.discount_type || 'fixed');
-    setVatPercentage(heldSale.vat_percentage || 0);
-    setNoVat(heldSale.vat_percentage === 0);
-    toast.success('Held sale loaded');
   };
 
   const handleSplitPayment = async (paymentData) => {
@@ -394,8 +402,33 @@ export default function Billing() {
     }
   };
 
+  const generateCartPreview = () => {
+    const { subtotal, discount, vat, total } = calculateTotals();
+    return {
+      sale_number: 'PREVIEW',
+      created_at: new Date().toISOString(),
+      items: cart.map((item) => ({
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+      })),
+      subtotal,
+      discount_amount: discount,
+      discount_type: discountType,
+      vat_percentage: noVat ? 0 : vatPercentage,
+      vat_amount: vat,
+      total,
+      payment_method: 'preview',
+      payment_amount: total,
+      change_amount: 0,
+      customer_name: selectedCustomer?.name || null,
+    };
+  };
+
   const handlePrintReceipt = () => {
-    if (!completedSale) return;
+    const saleToPrint = completedSale || generateCartPreview();
+    if (!saleToPrint) return;
     
     const paperSize = settings.receipt_paper_size || '80mm';
     const receiptContent = document.getElementById('receipt-content');
@@ -651,15 +684,15 @@ export default function Billing() {
               </button>
               <button
                 onClick={() => {
-                  if (completedSale) {
+                  if (completedSale || cart.length > 0) {
                     setShowReceipt(true);
                   } else {
-                    toast.error('No receipt available. Complete a sale first.');
+                    toast.error('Cart is empty. Add items to view receipt preview.');
                   }
                 }}
-                disabled={!completedSale}
+                disabled={!completedSale && cart.length === 0}
                 className={`px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-semibold ${
-                  completedSale
+                  (completedSale || cart.length > 0)
                     ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 }`}
@@ -879,9 +912,9 @@ export default function Billing() {
         />
       )}
 
-      {showReceipt && completedSale && (
+      {showReceipt && (completedSale || cart.length > 0) && (
         <ReceiptPrint
-          sale={completedSale}
+          sale={completedSale || generateCartPreview()}
           onClose={() => {
             setShowReceipt(false);
             // Don't clear completedSale so receipt can be viewed again
