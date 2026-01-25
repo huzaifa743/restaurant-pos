@@ -26,8 +26,11 @@ export default function LoadingScreen() {
             alt={settings.restaurant_name || 'POS Logo'}
             className="max-w-[200px] max-h-[150px] w-auto h-auto object-contain mb-4 animate-pulse"
             onError={(e) => {
+              console.error('Loading screen logo image failed to load:', settings.restaurant_logo, getImageURL(settings.restaurant_logo));
               e.target.style.display = 'none';
-              e.target.nextElementSibling.style.display = 'flex';
+              if (e.target.nextElementSibling) {
+                e.target.nextElementSibling.style.display = 'flex';
+              }
             }}
           />
         ) : null}

@@ -189,6 +189,10 @@ export default function Settings() {
                     src={logoPreview}
                     alt="Logo"
                     className="w-20 h-20 object-contain rounded border border-gray-300"
+                    onError={(e) => {
+                      console.error('Settings logo preview failed to load:', logoPreview);
+                      e.target.style.display = 'none';
+                    }}
                   />
                 )}
                 <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer">

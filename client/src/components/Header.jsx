@@ -67,6 +67,10 @@ export default function Header({ onMenuToggle, isMenuOpen }) {
                 src={getImageURL(settings.restaurant_logo)}
                 alt="Logo"
                 className="h-10 w-auto object-contain max-w-[120px]"
+                onError={(e) => {
+                  console.error('Logo image failed to load:', settings.restaurant_logo, getImageURL(settings.restaurant_logo));
+                  e.target.style.display = 'none';
+                }}
               />
             </div>
           ) : (

@@ -161,6 +161,10 @@ export default function ReceiptPrint({ sale, onClose, onPrint }) {
                     src={getImageURL(settings.restaurant_logo)}
                     alt="Logo"
                     className="logo-img"
+                    onError={(e) => {
+                      console.error('Receipt logo image failed to load:', settings.restaurant_logo, getImageURL(settings.restaurant_logo));
+                      e.target.style.display = 'none';
+                    }}
                   />
                 </div>
               )}
