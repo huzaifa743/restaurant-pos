@@ -1,6 +1,6 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 const { getTenantDb, closeTenantDb, requireTenant } = require('../middleware/tenant');
 
 const router = express.Router();
@@ -164,8 +164,8 @@ router.post('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, a
   }
 });
 
-// Delete sale
-router.delete('/:id', authenticateToken, requireTenant, getTenantDb, closeTenantDb, async (req, res) => {
+// Delete sale (admin only)
+router.delete('/:id', authenticateToken, requireRole('admin'), requireTenant, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     const saleId = req.params.id;
 

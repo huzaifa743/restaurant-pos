@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../contexts/SettingsContext';
+import { useAuth } from '../contexts/AuthContext';
 import api from '../api/api';
 import toast from 'react-hot-toast';
 import { Search, Eye, Printer, Trash2 } from 'lucide-react';
@@ -10,6 +11,7 @@ import { getReceiptPrintStyles } from '../utils/receiptPrintStyles';
 export default function SalesHistory() {
   const { t } = useTranslation();
   const { settings, formatCurrency } = useSettings();
+  const { user } = useAuth();
   const [sales, setSales] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -227,13 +229,15 @@ export default function SalesHistory() {
                           <Printer className="w-4 h-4" />
                           {t('salesHistory.reprint')}
                         </button>
-                        <button
-                          onClick={() => handleDeleteSale(sale.id)}
-                          className="text-red-600 hover:text-red-900 flex items-center gap-1"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete
-                        </button>
+                        {user?.role === 'admin' && (
+                          <button
+                            onClick={() => handleDeleteSale(sale.id)}
+                            className="text-red-600 hover:text-red-900 flex items-center gap-1"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
