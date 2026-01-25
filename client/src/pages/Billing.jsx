@@ -15,11 +15,9 @@ import {
   Tag,
   FileText,
   Receipt,
-  Clock,
-  CreditCard,
-  RotateCcw,
-  Eye,
   Save,
+  Eye,
+  CreditCard,
 } from 'lucide-react';
 import CheckoutModal from '../components/CheckoutModal';
 import CustomerModal from '../components/CustomerModal';
@@ -27,16 +25,10 @@ import ReceiptPrint from '../components/ReceiptPrint';
 import DiscountModal from '../components/DiscountModal';
 import VATModal from '../components/VATModal';
 import ProductModal from '../components/ProductModal';
-import HoldSalesModal from '../components/HoldSalesModal';
-import SplitPaymentModal from '../components/SplitPaymentModal';
-import RefundModal from '../components/RefundModal';
-import PrintPreviewModal from '../components/PrintPreviewModal';
-import { useAuth } from '../contexts/AuthContext';
 
 export default function Billing() {
   const { t } = useTranslation();
   const { settings, formatCurrency } = useSettings();
-  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [cart, setCart] = useState([]);
@@ -48,10 +40,6 @@ export default function Billing() {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [showVATModal, setShowVATModal] = useState(false);
-  const [showHoldSalesModal, setShowHoldSalesModal] = useState(false);
-  const [showSplitPaymentModal, setShowSplitPaymentModal] = useState(false);
-  const [showRefundModal, setShowRefundModal] = useState(false);
-  const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountType, setDiscountType] = useState('fixed');
   // Initialize VAT from settings and persist across sales
@@ -122,7 +110,6 @@ export default function Billing() {
           product_image: product.image,
           category_name: product.category_name || '',
           unit_price: parseFloat(product.price),
-          original_price: parseFloat(product.price), // Store original price for override tracking
           quantity: 1,
           total_price: parseFloat(product.price),
         },
@@ -188,37 +175,12 @@ export default function Billing() {
     );
   };
 
-  const updatePrice = async (id, price, productId, productName) => {
-    const item = cart.find(i => i.id === id);
-    if (!item) return;
-
-    const originalPrice = item.original_price || item.unit_price;
-    
-    // Track price override if price changed from original
-    if (Math.abs(price - originalPrice) > 0.01 && user) {
-      try {
-        await api.post('/sales/price-overrides/history', {
-          product_id: productId,
-          product_name: productName,
-          original_price: originalPrice,
-          override_price: price,
-          sale_id: null // Will be set when sale is completed
-        }).catch(err => console.error('Error tracking price override:', err));
-      } catch (error) {
-        console.error('Error tracking price override:', error);
-      }
-    }
-
+  const updatePrice = (id, price) => {
     setCart(
       cart.map((item) => {
         if (item.id === id) {
-          const newTotal = parseFloat((price * item.quantity).toFixed(2));
-          return { 
-            ...item, 
-            unit_price: price, 
-            total_price: newTotal,
-            original_price: item.original_price || originalPrice // Preserve original price
-          };
+          const newTotal = price * item.quantity;
+          return { ...item, unit_price: price, total_price: newTotal };
         }
         return item;
       })
@@ -270,20 +232,21 @@ export default function Billing() {
         vat_percentage: noVat ? 0 : vatPercentage,
         vat_amount: vat,
         total,
-        payment_method: paymentData.method || paymentData.payment_method,
+        payment_method: paymentData.method,
         payment_amount: paymentData.amount,
         change_amount: paymentData.change || 0,
-        split_payments: paymentData.split_payments,
       };
 
       const response = await api.post('/sales', saleData);
       setCompletedSale(response.data);
       setShowCheckoutModal(false);
-      setShowSplitPaymentModal(false);
       setShowReceipt(true);
       setCart([]);
       setSelectedCustomer(null);
       setDiscountAmount(0);
+      // VAT persists - don't reset it
+      // setVatPercentage(0);
+      // setNoVat(false);
       
       // Refresh products to update stock quantities
       await fetchProducts();
@@ -300,60 +263,6 @@ export default function Billing() {
       console.error('Error completing sale:', error);
       toast.error(error.response?.data?.error || 'Failed to complete sale');
     }
-  };
-
-  const handleHoldSale = async () => {
-    if (cart.length === 0) {
-      toast.error('Cart is empty');
-      return;
-    }
-
-    try {
-      const { subtotal, discount, vat, total } = calculateTotals();
-      
-      await api.post('/sales/hold', {
-        customer_id: selectedCustomer?.id || null,
-        items: cart.map((item) => ({
-          product_id: item.product_id,
-          product_name: item.product_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-        })),
-        subtotal,
-        discount_amount: discount,
-        discount_type: discountType,
-        vat_percentage: noVat ? 0 : vatPercentage,
-        vat_amount: vat,
-        total,
-      });
-
-      toast.success('Sale held successfully');
-      setCart([]);
-      setSelectedCustomer(null);
-      setDiscountAmount(0);
-    } catch (error) {
-      console.error('Error holding sale:', error);
-      toast.error(error.response?.data?.error || 'Failed to hold sale');
-    }
-  };
-
-  const handleResumeSale = (saleData) => {
-    // Restore cart items with original_price
-    const restoredItems = saleData.items.map(item => ({
-      ...item,
-      id: Date.now() + Math.random(), // Generate new IDs
-      original_price: item.original_price || item.unit_price
-    }));
-    setCart(restoredItems);
-    if (saleData.customer_id) {
-      // You might need to fetch customer details here
-      setSelectedCustomer({ id: saleData.customer_id });
-    }
-    setDiscountAmount(saleData.discount_amount || 0);
-    setDiscountType(saleData.discount_type || 'fixed');
-    setVatPercentage(saleData.vat_percentage || 0);
-    setNoVat(saleData.vat_percentage === 0);
   };
 
   const handlePrintReceipt = () => {
@@ -430,50 +339,50 @@ export default function Billing() {
         </div>
 
         {/* Cart Items */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3">
           {cart.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
               {t('billing.emptyCart')}
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {cart.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-gray-50 rounded-lg p-3 border border-gray-200"
+                  className="bg-gray-50 rounded-lg p-2 border border-gray-200"
                 >
-                  <div className="flex items-start gap-3 mb-2">
+                  <div className="flex items-start gap-2 mb-1.5">
                     {item.product_image && (
                       <img
                         src={getImageURL(item.product_image)}
                         alt={item.product_name}
-                        className="w-12 h-12 object-cover rounded"
+                        className="w-10 h-10 object-cover rounded flex-shrink-0"
                       />
                     )}
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-800 text-sm">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-800 text-xs leading-tight truncate">
                         {item.product_name}
                       </p>
-                      <p className="text-xs text-gray-500">{item.category_name}</p>
+                      <p className="text-xs text-gray-500 truncate">{item.category_name}</p>
                     </div>
                     <button
                       onClick={() => removeFromCart(item.id)}
-                      className="text-red-600 hover:text-red-700"
+                      className="text-red-600 hover:text-red-700 flex-shrink-0"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between mt-1.5">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => {
                           const newQty = Math.max(0.01, parseFloat((item.quantity - 0.1).toFixed(2)));
                           updateQuantity(item.id, newQty);
                         }}
-                        className="w-7 h-7 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
+                        className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
                       >
-                        <Minus className="w-4 h-4" />
+                        <Minus className="w-3 h-3" />
                       </button>
                       <input
                         type="number"
@@ -495,7 +404,7 @@ export default function Billing() {
                           const value = parseFloat(e.target.value) || 0.01;
                           updateQuantity(item.id, Math.max(0.01, value));
                         }}
-                        className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                        className="w-14 px-1.5 py-0.5 border border-gray-300 rounded text-xs text-center focus:ring-2 focus:ring-primary-500 focus:outline-none"
                         step="0.01"
                         min="0.01"
                         placeholder="0.00"
@@ -505,13 +414,13 @@ export default function Billing() {
                           const newQty = parseFloat((item.quantity + 0.1).toFixed(2));
                           updateQuantity(item.id, newQty);
                         }}
-                        className="w-7 h-7 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
+                        className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
                       >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-3 h-3" />
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <input
                         type="number"
                         value={item.unit_price}
@@ -519,26 +428,25 @@ export default function Billing() {
                           const value = e.target.value;
                           // Allow empty input for continuous typing
                           if (value === '' || value === '.') {
-                            updatePrice(item.id, 0, item.product_id, item.product_name);
+                            updatePrice(item.id, 0);
                             return;
                           }
                           const numValue = parseFloat(value);
                           if (!isNaN(numValue) && numValue >= 0) {
-                            updatePrice(item.id, numValue, item.product_id, item.product_name);
+                            updatePrice(item.id, numValue);
                           }
                         }}
                         onBlur={(e) => {
                           // Ensure value is set on blur if empty
                           const value = parseFloat(e.target.value) || 0;
-                          updatePrice(item.id, value, item.product_id, item.product_name);
+                          updatePrice(item.id, value);
                         }}
-                        className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                        className="w-18 px-1.5 py-0.5 border border-gray-300 rounded text-xs text-right focus:ring-2 focus:ring-primary-500 focus:outline-none"
                         step="0.01"
                         min="0"
                         placeholder="0.00"
-                        title={item.original_price && item.unit_price !== item.original_price ? `Original: ${formatCurrency(item.original_price)}` : ''}
                       />
-                      <span className="font-semibold text-gray-800 min-w-[60px] text-right">
+                      <span className="font-semibold text-gray-800 min-w-[55px] text-right text-xs">
                         {formatCurrency(item.total_price)}
                       </span>
                     </div>
@@ -550,62 +458,40 @@ export default function Billing() {
         </div>
 
         {/* Cart Summary */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50">
-          {/* Cart Summary Details */}
-          <div className="mb-4 pb-3 border-b border-gray-300">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">Items in Cart:</span>
-              <span className="text-sm font-bold text-primary-600">{cart.length}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-700">Total Quantity:</span>
-              <span className="text-sm font-bold text-gray-800">
-                {cart.reduce((sum, item) => sum + item.quantity, 0).toFixed(2)}
-              </span>
-            </div>
-            {cart.length > 0 && (
-              <div className="flex justify-between items-center mt-1">
-                <span className="text-xs text-gray-500">Avg. Item Value:</span>
-                <span className="text-xs font-medium text-gray-600">
-                  {formatCurrency(subtotal / cart.length)}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2 mb-4">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">{t('billing.subtotal')}:</span>
-              <span className="font-medium">{formatCurrency(subtotal)}</span>
+        <div className="p-3 border-t border-gray-200 bg-gray-50">
+          <div className="space-y-1 mb-3">
+            <div className="flex justify-between text-xs">
+              <span className="text-gray-600 font-bold">{t('billing.subtotal')}:</span>
+              <span className="font-bold">{formatCurrency(subtotal)}</span>
             </div>
             {discount > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">{t('billing.discount')}:</span>
-                <span className="font-medium text-red-600">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-600 font-bold">{t('billing.discount')}:</span>
+                <span className="font-bold text-red-600">
                   -{formatCurrency(discount)}
                 </span>
               </div>
             )}
             {vat > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">{t('billing.vat')}:</span>
-                <span className="font-medium">{formatCurrency(vat)}</span>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-600 font-bold">{t('billing.vat')}:</span>
+                <span className="font-bold">{formatCurrency(vat)}</span>
               </div>
             )}
-            <div className="flex justify-between text-lg font-bold border-t border-gray-300 pt-2">
+            <div className="flex justify-between text-sm font-bold border-t border-gray-300 pt-1.5">
               <span>{t('billing.total')}:</span>
               <span>{formatCurrency(total)}</span>
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {/* Discount and VAT Buttons */}
             <div className="flex gap-2">
               <button
                 onClick={() => setShowDiscountModal(true)}
-                className="flex-1 px-4 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
+                className="flex-1 px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold flex items-center justify-center gap-1.5 text-xs"
               >
-                <Tag className="w-4 h-4" />
+                <Tag className="w-3.5 h-3.5" />
                 {discountAmount > 0 
                   ? `Discount: ${formatCurrency(discount)}`
                   : 'Add Discount'
@@ -613,9 +499,9 @@ export default function Billing() {
               </button>
               <button
                 onClick={() => setShowVATModal(true)}
-                className="flex-1 px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
+                className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold flex items-center justify-center gap-1.5 text-xs"
               >
-                <FileText className="w-4 h-4" />
+                <FileText className="w-3.5 h-3.5" />
                 {noVat 
                   ? 'No VAT'
                   : vatPercentage > 0 
@@ -625,91 +511,31 @@ export default function Billing() {
               </button>
             </div>
 
-            {/* Hold and Split Payment Buttons */}
-            <div className="flex gap-2">
-              <button
-                onClick={handleHoldSale}
-                disabled={cart.length === 0}
-                className="flex-1 px-4 py-2.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-semibold flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Save className="w-4 h-4" />
-                Hold Sale
-              </button>
-              <button
-                onClick={() => setShowHoldSalesModal(true)}
-                className="px-4 py-2.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
-                title="View Held Sales"
-              >
-                <Clock className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setShowSplitPaymentModal(true)}
-                disabled={cart.length === 0}
-                className="px-4 py-2.5 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors font-semibold flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Split Payment"
-              >
-                <CreditCard className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Checkout and Receipt Buttons */}
-            <div className="flex gap-2">
-              <button
-                onClick={handleCheckout}
-                disabled={cart.length === 0}
-                className="flex-1 bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {t('billing.checkout')}
-              </button>
-              {completedSale && (
-                <>
-                  <button
-                    onClick={() => setShowPrintPreview(true)}
-                    className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-                    title="Print Preview"
-                  >
-                    <Eye className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => setShowRefundModal(true)}
-                    className="px-4 py-3 bg-red-200 text-red-700 rounded-lg hover:bg-red-300 transition-colors"
-                    title="Refund"
-                  >
-                    <RotateCcw className="w-5 h-5" />
-                  </button>
-                </>
-              )}
-              <button
-                onClick={() => setShowReceipt(true)}
-                disabled={!completedSale}
-                className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="View Receipt"
-              >
-                <Receipt className="w-5 h-5" />
-              </button>
-            </div>
-
+            {/* Receipt Button */}
+            <button
+              onClick={() => setShowReceipt(true)}
+              className="w-full px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center gap-2 text-xs font-semibold"
+            >
+              <Receipt className="w-4 h-4" />
+              View Receipt
+            </button>
           </div>
         </div>
       </div>
 
       {/* Products Section - Right Side - Scrolls only */}
       <div className="flex-1 min-h-0 flex flex-col bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-        <div className="flex-shrink-0 p-6 pb-0">
-          <div className="flex gap-4 mb-4">
+        <div className="flex-shrink-0 p-4 pb-0">
+          <div className="flex gap-3 mb-3">
             {/* Category Selection - Left Side, Bigger */}
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-5 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white text-base font-bold min-w-[240px]"
-              style={{
-                fontSize: '16px',
-                fontWeight: 'bold'
-              }}
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white text-sm font-bold min-w-[200px]"
             >
-              <option value="all" style={{ fontSize: '16px', fontWeight: 'bold' }}>{t('billing.allCategories')}</option>
+              <option value="all">{t('billing.allCategories')}</option>
               {categories.map((cat) => (
-                <option key={cat.id} value={cat.id} style={{ fontSize: '16px', fontWeight: 'bold' }}>
+                <option key={cat.id} value={cat.id}>
                   {cat.name}
                 </option>
               ))}
@@ -718,43 +544,75 @@ export default function Billing() {
             {/* Barcode Scanner and Search - Right Side */}
             <div className="flex-1 flex items-center gap-2">
               {/* Barcode Scanner */}
-              <div className="relative w-56">
-                <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <div className="relative w-48">
+                <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Scan Barcode"
                   value={barcodeInput}
                   onChange={handleBarcodeInputChange}
                   onKeyPress={handleBarcodeKeyPress}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-sm"
                   autoComplete="off"
                 />
               </div>
               {/* Search Product */}
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder={t('billing.searchProduct')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-sm"
                 />
               </div>
               <button
                 type="button"
                 onClick={() => setShowAddProductModal(true)}
-                className="flex-shrink-0 w-11 h-11 flex items-center justify-center bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors border border-primary-600"
+                className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors border border-primary-600"
                 title="Add product"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4" />
               </button>
             </div>
+          </div>
+          
+          {/* Action Buttons Row */}
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={handleCheckout}
+              className="flex-1 bg-primary-600 text-white py-2.5 rounded-lg font-semibold hover:bg-primary-700 transition-colors text-sm flex items-center justify-center gap-2"
+            >
+              <Receipt className="w-4 h-4" />
+              {t('billing.checkout')}
+            </button>
+            <button
+              onClick={() => toast.info('Hold Sale feature coming soon')}
+              className="px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <Save className="w-4 h-4" />
+              Hold Sale
+            </button>
+            <button
+              onClick={() => toast.info('View Hold Sale feature coming soon')}
+              className="px-4 py-2.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <Eye className="w-4 h-4" />
+              View Hold
+            </button>
+            <button
+              onClick={() => toast.info('Split Payment feature coming soon')}
+              className="px-4 py-2.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <CreditCard className="w-4 h-4" />
+              Split Payment
+            </button>
           </div>
         </div>
 
         {/* Products Grid - Only this scrolls */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-6 pt-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 pt-3">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
@@ -926,41 +784,6 @@ export default function Billing() {
           toast.success('Product added and placed in cart');
         }}
       />
-
-      <HoldSalesModal
-        open={showHoldSalesModal}
-        onClose={() => setShowHoldSalesModal(false)}
-        onResume={handleResumeSale}
-      />
-
-      <SplitPaymentModal
-        open={showSplitPaymentModal}
-        onClose={() => setShowSplitPaymentModal(false)}
-        total={total}
-        onConfirm={handlePayment}
-      />
-
-      {completedSale && (
-        <>
-          <RefundModal
-            open={showRefundModal}
-            onClose={() => setShowRefundModal(false)}
-            sale={completedSale}
-            onRefundComplete={() => {
-              setCompletedSale(null);
-              setShowReceipt(false);
-              toast.success('Refund completed');
-            }}
-          />
-
-          <PrintPreviewModal
-            open={showPrintPreview}
-            onClose={() => setShowPrintPreview(false)}
-            sale={completedSale}
-            onPrint={handlePrintReceipt}
-          />
-        </>
-      )}
     </div>
   );
 }
