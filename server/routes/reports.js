@@ -114,6 +114,26 @@ router.get('/users', authenticateToken, requireTenant, getTenantDb, closeTenantD
   try {
     const { start_date, end_date } = req.query;
 
+    // Build date filter conditions for sales
+    const params = [];
+    const dateConditions = [];
+    
+    if (start_date) {
+      dateConditions.push('DATE(s.created_at) >= ?');
+      params.push(start_date);
+    }
+    
+    if (end_date) {
+      dateConditions.push('DATE(s.created_at) <= ?');
+      params.push(end_date);
+    }
+
+    // Build the query with date filters in the JOIN to ensure only existing sales within date range are included
+    let dateFilter = '';
+    if (dateConditions.length > 0) {
+      dateFilter = ' AND ' + dateConditions.join(' AND ');
+    }
+
     let sql = `SELECT u.id, u.username, u.full_name, u.role,
                COUNT(DISTINCT s.id) as total_sales,
                COALESCE(SUM(s.total), 0) as total_revenue,
@@ -121,29 +141,11 @@ router.get('/users', authenticateToken, requireTenant, getTenantDb, closeTenantD
                COALESCE(SUM(s.vat_amount), 0) as total_vat,
                COALESCE(SUM(si.quantity), 0) as total_items_sold
                FROM users u
-               LEFT JOIN sales s ON u.id = s.user_id
+               LEFT JOIN sales s ON u.id = s.user_id${dateFilter}
                LEFT JOIN sale_items si ON s.id = si.sale_id
-               WHERE 1=1`;
-    
-    const params = [];
-    const conditions = [];
-
-    if (start_date) {
-      conditions.push('DATE(s.created_at) >= ?');
-      params.push(start_date);
-    }
-
-    if (end_date) {
-      conditions.push('DATE(s.created_at) <= ?');
-      params.push(end_date);
-    }
-
-    if (conditions.length > 0) {
-      sql += ' AND ' + conditions.join(' AND ');
-    }
-
-    sql += ` GROUP BY u.id, u.username, u.full_name, u.role
-             ORDER BY total_revenue DESC`;
+               GROUP BY u.id, u.username, u.full_name, u.role
+               HAVING COUNT(DISTINCT s.id) > 0
+               ORDER BY total_revenue DESC`;
 
     const users = await req.db.query(sql, params);
     
