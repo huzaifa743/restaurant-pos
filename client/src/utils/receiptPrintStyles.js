@@ -23,7 +23,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
         width: ${paperSize};
         height: auto;
         font-family: 'Courier New', monospace;
-        font-size: 12px;
+        font-size: 13px;
         line-height: 1.2;
         color: #000 !important;
         -webkit-print-color-adjust: exact;
@@ -63,7 +63,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
       padding: 0;
       width: ${paperSize};
       font-family: 'Courier New', monospace;
-      font-size: 12px;
+      font-size: 13px;
       line-height: 1.2;
       color: #000 !important;
       background: #fff;
@@ -107,7 +107,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
     }
     
     .receipt-title {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 900;
       margin: 8px 0 6px 0;
       color: #000 !important;
@@ -119,7 +119,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
     }
     
     .receipt-trn {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
       margin: 4px 0;
       color: #000 !important;
@@ -129,7 +129,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
     }
     
     .receipt-address {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
       margin: 4px 0;
       color: #000 !important;
@@ -139,7 +139,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
     }
     
     .receipt-contact {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       margin: 4px 0;
       color: #000 !important;
@@ -170,7 +170,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
       display: flex;
       align-items: center;
       margin: 2px 0;
-      font-size: 10px;
+      font-size: 11px;
       line-height: 1.3;
       width: 100%;
       max-width: 100%;
@@ -221,29 +221,29 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
     }
     
     .receipt-subtotal {
-      font-size: 11px;
+      font-size: 12px;
     }
     
     .receipt-subtotal-label {
-      font-size: 11px;
+      font-size: 12px;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     
     .receipt-subtotal-value {
-      font-size: 11px;
+      font-size: 12px;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     
     .receipt-total {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: bold;
       margin-top: 4px;
     }
     
     .total-amount {
-      font-size: 16px;
+      font-size: 18px;
       font-weight: bold;
     }
     
@@ -257,7 +257,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
       padding-bottom: 4px;
       margin-bottom: 4px;
       font-weight: 900;
-      font-size: 10px;
+      font-size: 11px;
       align-items: center;
       line-height: 1.3;
       width: 100%;
@@ -316,7 +316,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
       align-items: center;
       padding: 3px 0;
       border-bottom: none;
-      font-size: 10px;
+      font-size: 11px;
       line-height: 1.3;
       min-height: 18px;
       width: 100%;
@@ -343,7 +343,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
       display: block;
       font-weight: 900;
       color: #000 !important;
-      font-size: 10px;
+      font-size: 11px;
       line-height: 1.3;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
@@ -357,7 +357,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
       font-weight: 900;
       color: #000 !important;
       flex-shrink: 0;
-      font-size: 10px;
+      font-size: 11px;
       padding-right: 12px;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
@@ -369,7 +369,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
       font-weight: 900;
       color: #000 !important;
       flex-shrink: 0;
-      font-size: 10px;
+      font-size: 11px;
       padding-right: 3px;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
@@ -381,7 +381,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
       text-align: right;
       font-weight: 900;
       color: #000 !important;
-      font-size: 10px;
+      font-size: 11px;
       padding-right: 0;
       white-space: nowrap;
       -webkit-print-color-adjust: exact;
@@ -400,7 +400,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
     
     .receipt-order-type {
       text-align: center;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       margin: 0 0 3px 0;
       color: #000 !important;
@@ -412,7 +412,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
     
     .receipt-bill-number-line {
       text-align: center;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       margin: 0 0 3px 0;
       color: #000 !important;
@@ -427,7 +427,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
     
     .receipt-bill-date-wrapper {
       text-align: center;
-      font-size: 13px;
+      font-size: 14px;
       margin: 0 0 4px 0;
       color: #000 !important;
       font-weight: 700;
@@ -469,7 +469,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
     }
     
     .receipt-thanks {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 600;
       margin: 4px 0 2px 0;
       color: #000 !important;
@@ -485,7 +485,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
     }
     
     .receipt-nice-day {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 600;
       margin: 3px 0;
       color: #000 !important;
@@ -493,7 +493,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
     }
     
     .receipt-software {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       margin: 4px 0 2px 0;
       color: #000 !important;
@@ -507,7 +507,7 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
     }
     
     .receipt-phone {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       color: #000 !important;
       margin-top: 2px;
