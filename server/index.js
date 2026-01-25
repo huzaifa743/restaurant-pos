@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 // Import tenantManager to check if setup is needed
@@ -100,8 +101,38 @@ app.get('/api/ping', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Server is alive', timestamp: new Date().toISOString() });
 });
 
+// Ensure uploads directory exists before serving static files
+const uploadsDir = path.join(__dirname, 'uploads');
+const uploadsSettingsDir = path.join(__dirname, 'uploads', 'settings');
+const uploadsProductsDir = path.join(__dirname, 'uploads', 'products');
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('✅ Created uploads directory');
+}
+if (!fs.existsSync(uploadsSettingsDir)) {
+  fs.mkdirSync(uploadsSettingsDir, { recursive: true });
+  console.log('✅ Created uploads/settings directory');
+}
+if (!fs.existsSync(uploadsProductsDir)) {
+  fs.mkdirSync(uploadsProductsDir, { recursive: true });
+  console.log('✅ Created uploads/products directory');
+}
+
 // Serve static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    // Set proper headers for images
+    if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg') || filePath.endsWith('.png') || filePath.endsWith('.gif') || filePath.endsWith('.webp')) {
+      res.setHeader('Content-Type', filePath.endsWith('.png') ? 'image/png' : 
+                    filePath.endsWith('.gif') ? 'image/gif' : 
+                    filePath.endsWith('.webp') ? 'image/webp' : 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+    }
+  }
+}));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));

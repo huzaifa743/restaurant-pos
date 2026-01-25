@@ -36,6 +36,10 @@ const upload = multer({
     } else {
       cb(new Error('Only image files are allowed'));
     }
+  },
+  onError: (err, next) => {
+    console.error('Multer upload error:', err);
+    next(err);
   }
 });
 
@@ -145,13 +149,24 @@ router.put('/', authenticateToken, requireRole('admin'), preventDemoModification
     // Handle logo upload
     if (req.file) {
       const logoPath = `/uploads/settings/${req.file.filename}`;
+      const fullLogoPath = path.join(__dirname, '../uploads/settings', req.file.filename);
+      
+      // Verify file was actually saved
+      if (!fs.existsSync(fullLogoPath)) {
+        console.error('Logo file was not saved:', fullLogoPath);
+        return res.status(500).json({ error: 'Failed to save logo file' });
+      }
       
       // Delete old logo if exists
       const oldLogo = await req.db.get('SELECT value FROM settings WHERE key = ?', ['restaurant_logo']);
       if (oldLogo && oldLogo.value) {
         const oldLogoPath = path.join(__dirname, '..', oldLogo.value);
         if (fs.existsSync(oldLogoPath)) {
-          fs.unlinkSync(oldLogoPath);
+          try {
+            fs.unlinkSync(oldLogoPath);
+          } catch (err) {
+            console.warn('Failed to delete old logo:', err.message);
+          }
         }
       }
 
@@ -159,6 +174,8 @@ router.put('/', authenticateToken, requireRole('admin'), preventDemoModification
         'INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
         ['restaurant_logo', logoPath]
       );
+      
+      console.log('Logo saved successfully:', logoPath, 'File exists:', fs.existsSync(fullLogoPath));
     }
 
     // Update other settings
