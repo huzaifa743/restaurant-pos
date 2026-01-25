@@ -18,6 +18,7 @@ export const SettingsProvider = ({ children }) => {
     restaurant_address: '',
     restaurant_phone: '',
     restaurant_email: '',
+    trn: '',
     currency: 'USD',
     language: 'en',
     vat_percentage: '0',

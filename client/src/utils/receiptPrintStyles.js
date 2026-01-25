@@ -118,6 +118,16 @@ export const getReceiptPrintStyles = (paperSize = '80mm') => {
       print-color-adjust: exact;
     }
     
+    .receipt-trn {
+      font-size: 11px;
+      font-weight: 700;
+      margin: 4px 0;
+      color: #000 !important;
+      line-height: 1.3;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    
     .receipt-address {
       font-size: 11px;
       font-weight: 700;

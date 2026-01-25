@@ -19,6 +19,7 @@ export default function Settings() {
     restaurant_address: '',
     restaurant_phone: '',
     restaurant_email: '',
+    trn: '',
     currency: 'USD',
     language: 'en',
     vat_percentage: '0',
@@ -239,6 +240,19 @@ export default function Settings() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                TRN (Tax Registration Number)
+              </label>
+              <input
+                type="text"
+                value={settings.trn || ''}
+                onChange={(e) => handleInputChange('trn', e.target.value)}
+                placeholder="Enter TRN"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              />
             </div>
           </div>
         </div>

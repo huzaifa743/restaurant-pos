@@ -165,6 +165,9 @@ export default function ReceiptPrint({ sale, onClose, onPrint }) {
                 </div>
               )}
               <h1 className="receipt-title">{companyName}</h1>
+              {settings.trn && (
+                <p className="receipt-trn">TRN: {settings.trn}</p>
+              )}
               {settings.restaurant_address && (
                 <p className="receipt-address">{settings.restaurant_address}</p>
               )}

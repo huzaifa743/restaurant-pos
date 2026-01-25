@@ -23,6 +23,8 @@ export default function ProductModal({
     image: null,
     add_expiry_date: false,
     expiry_date: '',
+    add_barcode: false,
+    barcode: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -37,6 +39,8 @@ export default function ProductModal({
         image: null,
         add_expiry_date: !!editingProduct.expiry_date,
         expiry_date: editingProduct.expiry_date ? String(editingProduct.expiry_date).slice(0, 10) : '',
+        add_barcode: !!editingProduct.barcode,
+        barcode: editingProduct.barcode || '',
       });
     } else {
       setForm({
@@ -47,6 +51,8 @@ export default function ProductModal({
         image: null,
         add_expiry_date: false,
         expiry_date: '',
+        add_barcode: false,
+        barcode: '',
       });
     }
   }, [open, editingProduct, initialCategoryId]);
@@ -78,6 +84,10 @@ export default function ProductModal({
         'expiry_date',
         form.add_expiry_date && form.expiry_date ? form.expiry_date : ''
       );
+      formData.append(
+        'barcode',
+        form.add_barcode && form.barcode ? form.barcode : ''
+      );
 
       let product;
       if (editingProduct) {
@@ -103,6 +113,8 @@ export default function ProductModal({
         image: null,
         add_expiry_date: false,
         expiry_date: '',
+        add_barcode: false,
+        barcode: '',
       });
     } catch (err) {
       console.error('Product save error:', err);
@@ -239,6 +251,37 @@ export default function ProductModal({
                   type="date"
                   value={form.expiry_date}
                   onChange={(e) => handleChange('expiry_date', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.add_barcode}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setForm((prev) => ({
+                    ...prev,
+                    add_barcode: checked,
+                    ...(checked ? {} : { barcode: '' }),
+                  }));
+                }}
+                className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Add Barcode</span>
+            </label>
+            {form.add_barcode && (
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Barcode (Optional)</label>
+                <input
+                  type="text"
+                  value={form.barcode}
+                  onChange={(e) => handleChange('barcode', e.target.value)}
+                  placeholder="Enter barcode"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                 />
               </div>
