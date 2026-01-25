@@ -240,6 +240,10 @@ export default function Billing() {
       // VAT persists - don't reset it
       // setVatPercentage(0);
       // setNoVat(false);
+      
+      // Refresh products to update stock quantities
+      await fetchProducts();
+      
       toast.success('Sale completed successfully');
       
       // Auto print if enabled
