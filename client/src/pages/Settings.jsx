@@ -30,14 +30,22 @@ export default function Settings() {
   const [logoFile, setLogoFile] = useState(null);
 
   useEffect(() => {
-    // Only fetch settings once when component mounts
-    fetchSettings();
+    // Fetch settings when component mounts or when user changes
+    if (user) {
+      fetchSettings();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.tenant_code]);
 
   const fetchSettings = async () => {
     try {
-      const response = await api.get('/settings');
+      // Get tenant_code from user if available
+      let url = '/settings';
+      if (user?.tenant_code) {
+        url = `/settings?tenant_code=${user.tenant_code}`;
+      }
+      
+      const response = await api.get(url);
       setSettings(prev => ({ ...prev, ...response.data }));
       if (response.data.restaurant_logo) {
         setLogoPreview(getImageURL(response.data.restaurant_logo));

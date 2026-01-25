@@ -28,7 +28,7 @@ export const SettingsProvider = ({ children }) => {
   const hasFetchedRef = useRef(false);
 
   const fetchSettings = useCallback(async (force = false, tenantCode = null) => {
-    // Prevent multiple simultaneous fetches
+    // Prevent multiple simultaneous fetches unless forced
     if (hasFetchedRef.current && !force) return;
     
     if (force) {
@@ -51,9 +51,16 @@ export const SettingsProvider = ({ children }) => {
         }
       }
 
+      // Always call /settings - it will use tenant_code from token if authenticated
+      // or from query param if provided
       const url = tenantCode ? `/settings?tenant_code=${tenantCode}` : '/settings';
       const response = await api.get(url);
-      setSettings(prev => ({ ...prev, ...response.data }));
+      
+      // Merge with existing settings to preserve any that might not be in response
+      setSettings(prev => {
+        const merged = { ...prev, ...response.data };
+        return merged;
+      });
     } catch (error) {
       // Handle 401 and other errors gracefully
       if (error.response?.status === 401) {
@@ -73,7 +80,8 @@ export const SettingsProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // Only fetch once on mount
+    // Fetch settings on mount
+    // Will be refetched when user logs in via App.jsx useEffect
     if (!hasFetchedRef.current) {
       fetchSettings();
     }
