@@ -86,6 +86,15 @@ router.get('/', async (req, res) => {
           settingsObj[setting.key] = setting.value;
         });
         
+        // Verify logo file exists, if not, clear the logo path
+        if (settingsObj.restaurant_logo) {
+          const logoFilePath = path.join(__dirname, '..', settingsObj.restaurant_logo);
+          if (!fs.existsSync(logoFilePath)) {
+            console.warn('Logo file not found, clearing logo path:', settingsObj.restaurant_logo, 'Expected at:', logoFilePath);
+            settingsObj.restaurant_logo = '';
+          }
+        }
+        
         // Ensure all required settings exist with defaults
         const defaultSettings = {
           restaurant_name: 'NFM POS',
@@ -160,13 +169,18 @@ router.put('/', authenticateToken, requireRole('admin'), preventDemoModification
       // Delete old logo if exists
       const oldLogo = await req.db.get('SELECT value FROM settings WHERE key = ?', ['restaurant_logo']);
       if (oldLogo && oldLogo.value) {
-        const oldLogoPath = path.join(__dirname, '..', oldLogo.value);
+        // Normalize the path - remove leading slash if present for path.join
+        const normalizedOldPath = oldLogo.value.startsWith('/') ? oldLogo.value.substring(1) : oldLogo.value;
+        const oldLogoPath = path.join(__dirname, '..', normalizedOldPath);
         if (fs.existsSync(oldLogoPath)) {
           try {
             fs.unlinkSync(oldLogoPath);
+            console.log('✅ Deleted old logo:', oldLogoPath);
           } catch (err) {
-            console.warn('Failed to delete old logo:', err.message);
+            console.warn('⚠️ Failed to delete old logo:', err.message, 'Path:', oldLogoPath);
           }
+        } else {
+          console.log('ℹ️ Old logo file not found (may have been deleted already):', oldLogoPath);
         }
       }
 
@@ -175,7 +189,18 @@ router.put('/', authenticateToken, requireRole('admin'), preventDemoModification
         ['restaurant_logo', logoPath]
       );
       
-      console.log('Logo saved successfully:', logoPath, 'File exists:', fs.existsSync(fullLogoPath));
+      // Double-check file exists after saving
+      if (fs.existsSync(fullLogoPath)) {
+        console.log('✅ Logo saved successfully:', logoPath, 'File size:', fs.statSync(fullLogoPath).size, 'bytes');
+      } else {
+        console.error('❌ Logo file not found after save:', fullLogoPath);
+        // Clear the logo path if file doesn't exist
+        await req.db.run(
+          'INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
+          ['restaurant_logo', '']
+        );
+        return res.status(500).json({ error: 'Failed to save logo file' });
+      }
     }
 
     // Update other settings
