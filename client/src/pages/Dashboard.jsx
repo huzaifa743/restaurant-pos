@@ -74,6 +74,17 @@ export default function Dashboard() {
       .trim();
   };
 
+  // Format date for chart display (e.g., "Jan 25" instead of "2026-01-25")
+  const formatChartDate = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -154,21 +165,42 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={charts?.salesOverTime || []}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
+              <XAxis 
+                dataKey="date" 
+                tickFormatter={formatChartDate}
+                angle={-45}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis yAxisId="left" />
+              <YAxis yAxisId="right" orientation="right" />
+              <Tooltip 
+                formatter={(value, name) => {
+                  if (name === 'Revenue') {
+                    return [formatCurrency(value), name];
+                  }
+                  return [value, name];
+                }}
+                labelFormatter={(label) => formatChartDate(label)}
+              />
               <Legend />
               <Line
+                yAxisId="left"
                 type="monotone"
                 dataKey="count"
                 stroke="#0ea5e9"
                 name="Sales Count"
+                dot={{ r: 4 }}
+                activeDot={{ r: 6 }}
               />
               <Line
+                yAxisId="right"
                 type="monotone"
                 dataKey="revenue"
                 stroke="#10b981"
                 name="Revenue"
+                dot={{ r: 4 }}
+                activeDot={{ r: 6 }}
               />
             </LineChart>
           </ResponsiveContainer>
