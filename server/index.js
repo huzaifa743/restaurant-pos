@@ -162,6 +162,7 @@ app.use('/api/tenants', require('./routes/tenants')); // Tenant management (supe
 app.use('/api/products', require('./routes/products'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/sales', require('./routes/sales'));
+app.use('/api/held-sales', require('./routes/heldSales'));
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/reports', require('./routes/reports'));

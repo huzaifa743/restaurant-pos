@@ -25,6 +25,8 @@ import ReceiptPrint from '../components/ReceiptPrint';
 import DiscountModal from '../components/DiscountModal';
 import VATModal from '../components/VATModal';
 import ProductModal from '../components/ProductModal';
+import HoldSalesModal from '../components/HoldSalesModal';
+import SplitPaymentModal from '../components/SplitPaymentModal';
 
 export default function Billing() {
   const { t } = useTranslation();
@@ -51,6 +53,8 @@ export default function Billing() {
   const [completedSale, setCompletedSale] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [showHoldSalesModal, setShowHoldSalesModal] = useState(false);
+  const [showSplitPaymentModal, setShowSplitPaymentModal] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -211,6 +215,111 @@ export default function Billing() {
       return;
     }
     setShowCheckoutModal(true);
+  };
+
+  const handleHoldSale = async () => {
+    if (cart.length === 0) {
+      toast.error('Cart is empty');
+      return;
+    }
+
+    try {
+      const { subtotal, discount, vat, total } = calculateTotals();
+      const notes = window.prompt('Add a note for this held sale (optional):') || null;
+
+      const holdData = {
+        customer_id: selectedCustomer?.id || null,
+        cart_data: cart,
+        subtotal,
+        discount_amount: discount,
+        discount_type: discountType,
+        vat_percentage: noVat ? 0 : vatPercentage,
+        vat_amount: vat,
+        total,
+        notes
+      };
+
+      await api.post('/held-sales', holdData);
+      toast.success('Sale held successfully');
+      setCart([]);
+      setSelectedCustomer(null);
+      setDiscountAmount(0);
+    } catch (error) {
+      console.error('Error holding sale:', error);
+      toast.error(error.response?.data?.error || 'Failed to hold sale');
+    }
+  };
+
+  const handleSelectHold = (cartData, heldSale) => {
+    setCart(cartData);
+    if (heldSale.customer_id) {
+      // You might want to fetch the full customer object here
+      setSelectedCustomer({ id: heldSale.customer_id, name: heldSale.customer_name });
+    }
+    setDiscountAmount(heldSale.discount_amount || 0);
+    setDiscountType(heldSale.discount_type || 'fixed');
+    setVatPercentage(heldSale.vat_percentage || 0);
+    setNoVat(heldSale.vat_percentage === 0);
+    toast.success('Held sale loaded');
+  };
+
+  const handleSplitPayment = async (paymentData) => {
+    try {
+      if (cart.length === 0) {
+        toast.error('Cart is empty');
+        return;
+      }
+
+      const { subtotal, discount, vat, total } = calculateTotals();
+
+      // For split payment, we'll use the first payment method as primary
+      // and store all payments in a notes field or create multiple payment records
+      const primaryPayment = paymentData.payments[0];
+
+      const saleData = {
+        customer_id: selectedCustomer?.id || null,
+        items: cart.map((item) => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: parseFloat(item.quantity),
+          unit_price: parseFloat(item.unit_price),
+          total_price: parseFloat(item.total_price),
+        })),
+        subtotal: parseFloat(subtotal),
+        discount_amount: parseFloat(discount),
+        discount_type: discountType,
+        vat_percentage: noVat ? 0 : parseFloat(vatPercentage),
+        vat_amount: parseFloat(vat),
+        total: parseFloat(total),
+        payment_method: `split:${paymentData.payments.map(p => `${p.method}:${p.amount}`).join(',')}`,
+        payment_amount: parseFloat(paymentData.totalPaid),
+        change_amount: parseFloat(paymentData.change || 0),
+      };
+
+      const response = await api.post('/sales', saleData);
+      setCompletedSale(response.data);
+      setShowSplitPaymentModal(false);
+      setShowReceipt(true);
+      setCart([]);
+      setSelectedCustomer(null);
+      setDiscountAmount(0);
+      
+      // Refresh products to update stock quantities
+      await fetchProducts();
+      
+      toast.success('Sale completed successfully with split payment');
+      
+      // Auto print if enabled
+      if (settings.receipt_auto_print === 'true') {
+        setTimeout(() => {
+          handlePrintReceipt();
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Error completing split payment sale:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to complete sale';
+      toast.error(errorMessage);
+    }
   };
 
   const handlePayment = async (paymentData) => {
@@ -541,8 +650,19 @@ export default function Billing() {
                 {t('billing.checkout')}
               </button>
               <button
-                onClick={() => setShowReceipt(true)}
-                className="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center gap-2 text-sm font-semibold"
+                onClick={() => {
+                  if (completedSale) {
+                    setShowReceipt(true);
+                  } else {
+                    toast.error('No receipt available. Complete a sale first.');
+                  }
+                }}
+                disabled={!completedSale}
+                className={`px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-semibold ${
+                  completedSale
+                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
               >
                 <Receipt className="w-4 h-4" />
                 View Receipt
@@ -700,18 +820,19 @@ export default function Billing() {
         <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50">
           <div className="flex gap-2">
             <button
-              onClick={() => {
-                toast.success('Hold Sale feature coming soon');
-              }}
-              className="flex-1 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
+              onClick={handleHoldSale}
+              disabled={cart.length === 0}
+              className={`flex-1 px-4 py-2.5 rounded-lg transition-colors font-semibold flex items-center justify-center gap-2 text-sm ${
+                cart.length > 0
+                  ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
             >
               <Save className="w-4 h-4" />
               Hold Sale
             </button>
             <button
-              onClick={() => {
-                toast.success('View Hold Sale feature coming soon');
-              }}
+              onClick={() => setShowHoldSalesModal(true)}
               className="flex-1 px-4 py-2.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
             >
               <Eye className="w-4 h-4" />
@@ -719,9 +840,18 @@ export default function Billing() {
             </button>
             <button
               onClick={() => {
-                toast.success('Split Payment feature coming soon');
+                if (cart.length === 0) {
+                  toast.error('Cart is empty');
+                  return;
+                }
+                setShowSplitPaymentModal(true);
               }}
-              className="flex-1 px-4 py-2.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
+              disabled={cart.length === 0}
+              className={`flex-1 px-4 py-2.5 rounded-lg transition-colors font-semibold flex items-center justify-center gap-2 text-sm ${
+                cart.length > 0
+                  ? 'bg-purple-500 text-white hover:bg-purple-600'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
             >
               <CreditCard className="w-4 h-4" />
               Split Payment
@@ -814,6 +944,21 @@ export default function Billing() {
           toast.success('Product added and placed in cart');
         }}
       />
+
+      {showHoldSalesModal && (
+        <HoldSalesModal
+          onClose={() => setShowHoldSalesModal(false)}
+          onSelectHold={handleSelectHold}
+        />
+      )}
+
+      {showSplitPaymentModal && (
+        <SplitPaymentModal
+          total={calculateTotals().total}
+          onClose={() => setShowSplitPaymentModal(false)}
+          onConfirm={handleSplitPayment}
+        />
+      )}
     </div>
   );
 }

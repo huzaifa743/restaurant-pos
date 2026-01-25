@@ -158,6 +158,27 @@ function initializeDatabase() {
       if (err) console.error('Error creating sale_items table:', err);
     });
 
+    // Held sales table
+    db.run(`CREATE TABLE IF NOT EXISTS held_sales (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      hold_number TEXT UNIQUE NOT NULL,
+      customer_id INTEGER,
+      user_id INTEGER NOT NULL,
+      cart_data TEXT NOT NULL,
+      subtotal REAL NOT NULL,
+      discount_amount REAL DEFAULT 0,
+      discount_type TEXT DEFAULT 'fixed',
+      vat_percentage REAL DEFAULT 0,
+      vat_amount REAL DEFAULT 0,
+      total REAL NOT NULL,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (customer_id) REFERENCES customers(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )`, (err) => {
+      if (err) console.error('Error creating held_sales table:', err);
+    });
+
     // Settings table
     db.run(`CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
