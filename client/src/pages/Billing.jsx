@@ -508,7 +508,7 @@ export default function Billing() {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-5 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white text-sm font-medium min-w-[200px]"
+              className="px-5 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white text-base font-bold min-w-[240px]"
             >
               <option value="all">{t('billing.allCategories')}</option>
               {categories.map((cat) => (
@@ -521,7 +521,7 @@ export default function Billing() {
             {/* Barcode Scanner and Search - Right Side */}
             <div className="flex-1 flex items-center gap-2">
               {/* Barcode Scanner */}
-              <div className="relative w-48">
+              <div className="relative w-56">
                 <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"
