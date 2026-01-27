@@ -4,7 +4,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api/api';
 import toast from 'react-hot-toast';
-import { Package, User, MapPin, DollarSign, CheckCircle, Clock, Truck, XCircle, Search, Eye, Printer, FileText, X, Phone, Mail } from 'lucide-react';
+import { Package, User, MapPin, CheckCircle, Clock, XCircle, Search, Eye, Printer, FileText, X, Phone, Mail } from 'lucide-react';
 
 export default function Deliveries() {
   const { t } = useTranslation();
@@ -16,28 +16,15 @@ export default function Deliveries() {
   const [statusFilter, setStatusFilter] = useState('');
   const [deliveryBoyFilter, setDeliveryBoyFilter] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [settlementData, setSettlementData] = useState([]);
-  const [showSettlement, setShowSettlement] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [editingNotes, setEditingNotes] = useState(false);
 
-  // Helper: check if there is any non-zero settlement value to show
-  const hasSettlementData = settlementData.some((s) => {
-    const pending = Number(s.pending_settlement || 0);
-    const collected = Number(s.total_collected || 0);
-    const settled = Number(s.total_settled || 0);
-    return pending > 0 || collected > 0 || settled > 0;
-  });
-
   useEffect(() => {
     fetchDeliveries();
     fetchDeliveryBoys();
-    if (user?.role === 'admin') {
-      fetchSettlement();
-    }
   }, [statusFilter, deliveryBoyFilter, selectedDate, user, searchTerm]);
 
   const fetchDeliveries = async () => {
@@ -82,16 +69,6 @@ export default function Deliveries() {
     }
   };
 
-  const fetchSettlement = async () => {
-    try {
-      const params = { date: selectedDate };
-      const response = await api.get('/deliveries/settlement', { params });
-      setSettlementData(response.data);
-    } catch (error) {
-      console.error('Error fetching settlement:', error);
-    }
-  };
-
   const handleAssignDeliveryBoy = async (saleId, deliveryBoyId) => {
     try {
       await api.put(`/deliveries/${saleId}/assign`, { delivery_boy_id: deliveryBoyId });
@@ -108,68 +85,9 @@ export default function Deliveries() {
       await api.put(`/deliveries/${saleId}/status`, { status: newStatus });
       toast.success('Delivery status updated successfully');
       fetchDeliveries();
-      if (user?.role === 'admin') {
-        fetchSettlement();
-      }
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error(error.response?.data?.error || 'Failed to update status');
-    }
-  };
-
-  const handleSettle = async (deliveryBoyId = null) => {
-    try {
-      const data = { date: selectedDate };
-      if (deliveryBoyId) data.delivery_boy_id = deliveryBoyId;
-      
-      const response = await api.post('/deliveries/settle', data);
-      toast.success(response.data.message || 'Payments settled successfully');
-      fetchDeliveries();
-      fetchSettlement();
-    } catch (error) {
-      console.error('Error settling payments:', error);
-      toast.error(error.response?.data?.error || 'Failed to settle payments');
-    }
-  };
-
-  const handlePartialSettle = async (settlement) => {
-    const maxAmount = settlement.pending_settlement || 0;
-    if (!maxAmount || maxAmount <= 0) {
-      toast.error('No pending amount to settle for this delivery boy');
-      return;
-    }
-
-    const input = window.prompt(
-      `Enter amount to collect from ${settlement.delivery_boy_name} (max ${formatCurrency(maxAmount)}):`,
-      maxAmount
-    );
-
-    if (input === null) return; // cancelled
-
-    const amount = parseFloat(input);
-    if (isNaN(amount) || amount <= 0) {
-      toast.error('Please enter a valid amount greater than zero');
-      return;
-    }
-
-    if (amount > maxAmount) {
-      toast.error('Amount cannot be greater than pending amount');
-      return;
-    }
-
-    try {
-      const data = {
-        delivery_boy_id: settlement.delivery_boy_id,
-        date: selectedDate,
-        amount
-      };
-      const response = await api.post('/deliveries/settle-partial', data);
-      toast.success(response.data.message || 'Partial payment settled successfully');
-      fetchDeliveries();
-      fetchSettlement();
-    } catch (error) {
-      console.error('Error partially settling payments:', error);
-      toast.error(error.response?.data?.error || 'Failed to partially settle payments');
     }
   };
 
@@ -268,24 +186,16 @@ export default function Deliveries() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'assigned': return 'bg-blue-100 text-blue-800';
-      case 'out_for_delivery': return 'bg-purple-100 text-purple-800';
-      case 'delivered': return 'bg-green-100 text-green-800';
-      case 'payment_collected': return 'bg-indigo-100 text-indigo-800';
-      case 'settled': return 'bg-gray-100 text-gray-800';
+      case 'payment_pending': return 'bg-yellow-100 text-yellow-800';
+      case 'payment_received': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'pending': return <Clock className="w-4 h-4" />;
-      case 'assigned': return <User className="w-4 h-4" />;
-      case 'out_for_delivery': return <Truck className="w-4 h-4" />;
-      case 'delivered': return <CheckCircle className="w-4 h-4" />;
-      case 'payment_collected': return <DollarSign className="w-4 h-4" />;
-      case 'settled': return <CheckCircle className="w-4 h-4" />;
+      case 'payment_pending': return <Clock className="w-4 h-4" />;
+      case 'payment_received': return <CheckCircle className="w-4 h-4" />;
       default: return <Package className="w-4 h-4" />;
     }
   };
@@ -294,15 +204,6 @@ export default function Deliveries() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-800">Delivery Management</h1>
-        {user?.role === 'admin' && (
-          <button
-            onClick={() => setShowSettlement(!showSettlement)}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
-          >
-            <DollarSign className="w-5 h-5" />
-            {showSettlement ? 'Hide' : 'Show'} Settlement
-          </button>
-        )}
       </div>
 
       {/* Filters */}
@@ -338,12 +239,8 @@ export default function Deliveries() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
             >
               <option value="">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="assigned">Assigned</option>
-              <option value="out_for_delivery">Out for Delivery</option>
-              <option value="delivered">Delivered</option>
-              <option value="payment_collected">Payment Collected</option>
-              <option value="settled">Settled</option>
+              <option value="payment_pending">Payment Pending</option>
+              <option value="payment_received">Payment Received</option>
             </select>
           </div>
           <div>
@@ -372,85 +269,7 @@ export default function Deliveries() {
         </div>
       </div>
 
-      {/* Settlement Summary (Admin Only) */}
-      {showSettlement && user?.role === 'admin' && (
-        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-1">End of Day Settlement</h2>
-          <p className="text-xs text-gray-500 mb-4">
-            Shows only <span className="font-semibold">Pay After Delivery</span> orders that have been marked as{' '}
-            <span className="font-semibold">Payment Collected</span> for the selected date.
-          </p>
-          {settlementData.length > 0 && hasSettlementData ? (
-            <div className="space-y-4">
-              {settlementData.map((settlement) => (
-                <div key={settlement.delivery_boy_id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <h3 className="font-semibold text-gray-800">
-                        {settlement.delivery_boy_name}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Total Deliveries: {settlement.total_deliveries}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">Pending Payment (Receivable)</p>
-                      <p className="text-xl font-bold text-primary-600">
-                        {formatCurrency(settlement.pending_settlement || 0)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 mt-4 text-sm">
-                    <div>
-                      <p className="text-gray-600">Total Collected (by rider)</p>
-                      <p className="font-semibold">{formatCurrency(settlement.total_collected || 0)}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Already Settled</p>
-                      <p className="font-semibold">{formatCurrency(settlement.total_settled || 0)}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => handleSettle(settlement.delivery_boy_id)}
-                        disabled={!settlement.pending_settlement || settlement.pending_settlement === 0}
-                        className={`w-full px-4 py-2 rounded-lg font-semibold ${
-                          settlement.pending_settlement && settlement.pending_settlement > 0
-                            ? 'bg-green-600 text-white hover:bg-green-700'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                      >
-                        Collect Full ({formatCurrency(settlement.pending_settlement || 0)})
-                      </button>
-                      <button
-                        onClick={() => handlePartialSettle(settlement)}
-                        disabled={!settlement.pending_settlement || settlement.pending_settlement === 0}
-                        className={`w-full px-4 py-2 rounded-lg font-semibold border ${
-                          settlement.pending_settlement && settlement.pending_settlement > 0
-                            ? 'border-primary-600 text-primary-600 hover:bg-primary-50'
-                            : 'border-gray-300 text-gray-400 cursor-not-allowed'
-                        }`}
-                      >
-                        Collect Partial
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <button
-                onClick={() => handleSettle()}
-                className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-semibold"
-              >
-                Settle All Payments
-              </button>
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center py-4">
-              No collected payments to settle for the selected date.
-            </p>
-          )}
-        </div>
-      )}
-
+      {/* Simple list only – no complex settlement UI */}
       {/* Deliveries List */}
       <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
         {loading ? (
@@ -536,28 +355,12 @@ export default function Deliveries() {
                           <Eye className="w-3 h-3" />
                           View Details
                         </button>
-                        {delivery.delivery_status === 'pending' && delivery.delivery_boy_id && (
+                        {delivery.delivery_status === 'payment_pending' && (
                           <button
-                            onClick={() => handleUpdateStatus(delivery.id, 'out_for_delivery')}
-                            className="text-blue-600 hover:text-blue-700 text-xs"
-                          >
-                            Mark Out for Delivery
-                          </button>
-                        )}
-                        {delivery.delivery_status === 'out_for_delivery' && (
-                          <button
-                            onClick={() => handleUpdateStatus(delivery.id, 'delivered')}
+                            onClick={() => handleUpdateStatus(delivery.id, 'payment_received')}
                             className="text-green-600 hover:text-green-700 text-xs"
                           >
-                            Mark Delivered
-                          </button>
-                        )}
-                        {delivery.delivery_status === 'delivered' && (
-                          <button
-                            onClick={() => handleUpdateStatus(delivery.id, 'payment_collected')}
-                            className="text-indigo-600 hover:text-indigo-700 text-xs"
-                          >
-                            Mark Payment Collected
+                            Mark Payment Received
                           </button>
                         )}
                       </div>

@@ -147,10 +147,11 @@ router.post('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, a
     let deliveryBoyId = null;
     let deliveryAssignedAt = null;
     
+    // Simple flow: Pay After Delivery = payment pending until marked received
     if (payment_method === 'payAfterDelivery') {
-      deliveryStatus = delivery_boy_id ? 'assigned' : 'pending';
+      deliveryStatus = 'payment_pending';
       deliveryBoyId = delivery_boy_id || null;
-      deliveryAssignedAt = delivery_boy_id ? new Date().toISOString() : null;
+      deliveryAssignedAt = deliveryBoyId ? new Date().toISOString() : null;
     }
 
     // Create sale
