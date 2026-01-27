@@ -291,9 +291,11 @@ export default function Billing() {
 
       await api.post('/held-sales', holdData);
       toast.success('Sale held successfully');
+      // Clear cart and reset all related state
       setCart([]);
       setSelectedCustomer(null);
       setDiscountAmount(0);
+      setDiscountType('fixed');
     } catch (error) {
       console.error('Error holding sale:', error);
       toast.error(error.response?.data?.error || 'Failed to hold sale');
@@ -387,9 +389,11 @@ export default function Billing() {
       setCompletedSale(response.data);
       setShowSplitPaymentModal(false);
       setShowReceipt(true);
+      // Clear cart and reset all related state immediately
       setCart([]);
       setSelectedCustomer(null);
       setDiscountAmount(0);
+      setDiscountType('fixed');
       
       // Refresh products to update stock quantities
       await fetchProducts();
@@ -485,9 +489,11 @@ export default function Billing() {
       setCompletedSale(response.data);
       setShowCheckoutModal(false);
       setShowReceipt(true);
+      // Clear cart and reset all related state immediately
       setCart([]);
       setSelectedCustomer(null);
       setDiscountAmount(0);
+      setDiscountType('fixed');
       // VAT persists - don't reset it
       // setVatPercentage(0);
       // setNoVat(false);
