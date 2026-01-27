@@ -168,6 +168,7 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/settings', require('./routes/settings'));
+app.use('/api/deliveries', require('./routes/deliveries'));
 
 // Serve React app in production (catch-all must be last)
 if (process.env.NODE_ENV === 'production') {

@@ -12,7 +12,8 @@ import {
   Settings,
   Building2,
   X,
-  LogOut
+  LogOut,
+  Truck
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onToggle }) {
@@ -31,6 +32,7 @@ export default function Sidebar({ isOpen, onToggle }) {
         { path: '/billing', icon: ShoppingCart, label: t('nav.billing') },
         { path: '/inventory', icon: Package, label: t('nav.inventory') },
         { path: '/sales-history', icon: History, label: t('nav.salesHistory') },
+        { path: '/deliveries', icon: Truck, label: 'Deliveries' },
         { path: '/reports', icon: BarChart3, label: t('nav.reports') },
         { path: '/users', icon: Users, label: t('nav.users') },
         { path: '/settings', icon: Settings, label: t('nav.settings') },

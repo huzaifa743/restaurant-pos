@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../contexts/SettingsContext';
 import { X } from 'lucide-react';
+import api from '../api/api';
 
 export default function CheckoutModal({ total, onClose, onConfirm }) {
   const { t } = useTranslation();
@@ -9,8 +10,29 @@ export default function CheckoutModal({ total, onClose, onConfirm }) {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentAmount, setPaymentAmount] = useState(total);
   const [customAmount, setCustomAmount] = useState('');
+  const [deliveryBoys, setDeliveryBoys] = useState([]);
+  const [selectedDeliveryBoy, setSelectedDeliveryBoy] = useState('');
+  const [loadingDeliveryBoys, setLoadingDeliveryBoys] = useState(false);
 
   const quickAmounts = [10, 20, 50, 100, 200, 500];
+
+  useEffect(() => {
+    if (paymentMethod === 'payAfterDelivery') {
+      fetchDeliveryBoys();
+    }
+  }, [paymentMethod]);
+
+  const fetchDeliveryBoys = async () => {
+    setLoadingDeliveryBoys(true);
+    try {
+      const response = await api.get('/deliveries/delivery-boys');
+      setDeliveryBoys(response.data);
+    } catch (error) {
+      console.error('Error fetching delivery boys:', error);
+    } finally {
+      setLoadingDeliveryBoys(false);
+    }
+  };
 
   const handleQuickAmount = (amount) => {
     setPaymentAmount(amount);
@@ -25,10 +47,15 @@ export default function CheckoutModal({ total, onClose, onConfirm }) {
   const changeAmount = paymentAmount - total;
 
   const handleConfirm = () => {
+    if (paymentMethod === 'payAfterDelivery' && !selectedDeliveryBoy) {
+      return; // Don't allow confirmation without selecting delivery boy
+    }
+    
     onConfirm({
       method: paymentMethod,
       amount: paymentAmount,
       change: changeAmount > 0 ? changeAmount : 0,
+      delivery_boy_id: paymentMethod === 'payAfterDelivery' ? parseInt(selectedDeliveryBoy) : null,
     });
   };
 
@@ -110,6 +137,34 @@ export default function CheckoutModal({ total, onClose, onConfirm }) {
             </div>
           )}
 
+          {paymentMethod === 'payAfterDelivery' && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Delivery Boy
+              </label>
+              {loadingDeliveryBoys ? (
+                <div className="text-center py-4 text-gray-500">Loading delivery boys...</div>
+              ) : (
+                <select
+                  value={selectedDeliveryBoy}
+                  onChange={(e) => setSelectedDeliveryBoy(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  required
+                >
+                  <option value="">-- Select Delivery Boy --</option>
+                  {deliveryBoys.map((boy) => (
+                    <option key={boy.id} value={boy.id}>
+                      {boy.full_name || boy.username} ({boy.role})
+                    </option>
+                  ))}
+                </select>
+              )}
+              {paymentMethod === 'payAfterDelivery' && !selectedDeliveryBoy && (
+                <p className="text-xs text-red-600 mt-1">Please select a delivery boy to continue</p>
+              )}
+            </div>
+          )}
+
           {paymentMethod !== 'payAfterDelivery' && (
             <div className={`rounded-lg p-4 mb-4 ${
               changeAmount > 0 ? 'bg-green-50' : changeAmount < 0 ? 'bg-red-50' : 'bg-gray-50'
@@ -135,7 +190,12 @@ export default function CheckoutModal({ total, onClose, onConfirm }) {
           </button>
           <button
             onClick={handleConfirm}
-            className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-semibold"
+            disabled={paymentMethod === 'payAfterDelivery' && !selectedDeliveryBoy}
+            className={`flex-1 px-4 py-3 rounded-lg transition-colors font-semibold ${
+              paymentMethod === 'payAfterDelivery' && !selectedDeliveryBoy
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-primary-600 text-white hover:bg-primary-700'
+            }`}
           >
             {t('common.confirm')}
           </button>

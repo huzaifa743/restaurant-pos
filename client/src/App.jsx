@@ -12,6 +12,7 @@ import Reports from './pages/Reports';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
 import Tenants from './pages/Tenants';
+import Deliveries from './pages/Deliveries';
 import Layout from './components/Layout';
 import LoadingScreen from './components/LoadingScreen';
 
@@ -55,6 +56,7 @@ function AppRoutes() {
         <Route path="users" element={<Users />} />
         <Route path="settings" element={<Settings />} />
         <Route path="tenants" element={<Tenants />} />
+        <Route path="deliveries" element={<Deliveries />} />
       </Route>
     </Routes>
   );

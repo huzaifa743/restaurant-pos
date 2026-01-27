@@ -478,6 +478,7 @@ export default function Billing() {
         payment_method: paymentData.method,
         payment_amount: parseFloat(paymentData.amount),
         change_amount: parseFloat(paymentData.change || 0),
+        delivery_boy_id: paymentData.delivery_boy_id || null,
       };
 
       const response = await api.post('/sales', saleData);

@@ -4,16 +4,39 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 const { getTenantDb, closeTenantDb, requireTenant } = require('../middleware/tenant');
 
 const router = express.Router();
+const deliveryMigratedTenants = new Set();
+
+async function ensureDeliveryColumns(db, tenantCode) {
+  if (!tenantCode || deliveryMigratedTenants.has(tenantCode)) return;
+  try {
+    await db.run('ALTER TABLE sales ADD COLUMN delivery_boy_id INTEGER');
+    await db.run('ALTER TABLE sales ADD COLUMN delivery_status TEXT DEFAULT "pending"');
+    await db.run('ALTER TABLE sales ADD COLUMN delivery_payment_collected INTEGER DEFAULT 0');
+    await db.run('ALTER TABLE sales ADD COLUMN delivery_settled_at DATETIME');
+    await db.run('ALTER TABLE sales ADD COLUMN delivery_assigned_at DATETIME');
+    await db.run('ALTER TABLE sales ADD COLUMN delivery_delivered_at DATETIME');
+  } catch (err) {
+    if (!err.message || !err.message.includes('duplicate column')) throw err;
+  }
+  deliveryMigratedTenants.add(tenantCode);
+}
 
 // Get all sales
 router.get('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, async (req, res) => {
   try {
-    const { start_date, end_date, search, payment_method } = req.query;
+    const tenantCode = req.user?.tenant_code;
+    if (tenantCode) {
+      await ensureDeliveryColumns(req.db, tenantCode);
+    }
+
+    const { start_date, end_date, search, payment_method, delivery_status } = req.query;
     
-    let sql = `SELECT s.*, u.username as user_name, c.name as customer_name, c.phone as customer_phone 
+    let sql = `SELECT s.*, u.username as user_name, c.name as customer_name, c.phone as customer_phone,
+               db.username as delivery_boy_name, db.full_name as delivery_boy_full_name
                FROM sales s 
                LEFT JOIN users u ON s.user_id = u.id 
-               LEFT JOIN customers c ON s.customer_id = c.id 
+               LEFT JOIN customers c ON s.customer_id = c.id
+               LEFT JOIN users db ON s.delivery_boy_id = db.id
                WHERE 1=1`;
     const params = [];
 
@@ -38,6 +61,11 @@ router.get('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, as
       params.push(payment_method);
     }
 
+    if (delivery_status) {
+      sql += ' AND s.delivery_status = ?';
+      params.push(delivery_status);
+    }
+
     sql += ' ORDER BY s.created_at DESC';
 
     const sales = await req.db.query(sql, params);
@@ -51,12 +79,19 @@ router.get('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, as
 // Get single sale with items
 router.get('/:id', authenticateToken, requireTenant, getTenantDb, closeTenantDb, async (req, res) => {
   try {
+    const tenantCode = req.user?.tenant_code;
+    if (tenantCode) {
+      await ensureDeliveryColumns(req.db, tenantCode);
+    }
+
     const sale = await req.db.get(
       `SELECT s.*, u.username as user_name, c.name as customer_name, c.phone as customer_phone, 
-       c.email as customer_email, c.address as customer_address, c.city as customer_city, c.country as customer_country
+       c.email as customer_email, c.address as customer_address, c.city as customer_city, c.country as customer_country,
+       db.username as delivery_boy_name, db.full_name as delivery_boy_full_name
        FROM sales s 
        LEFT JOIN users u ON s.user_id = u.id 
-       LEFT JOIN customers c ON s.customer_id = c.id 
+       LEFT JOIN customers c ON s.customer_id = c.id
+       LEFT JOIN users db ON s.delivery_boy_id = db.id
        WHERE s.id = ?`,
       [req.params.id]
     );
@@ -80,6 +115,11 @@ router.get('/:id', authenticateToken, requireTenant, getTenantDb, closeTenantDb,
 // Create sale
 router.post('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, async (req, res) => {
   try {
+    const tenantCode = req.user?.tenant_code;
+    if (tenantCode) {
+      await ensureDeliveryColumns(req.db, tenantCode);
+    }
+
     const {
       customer_id,
       items,
@@ -92,7 +132,8 @@ router.post('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, a
       payment_method,
       payment_amount,
       change_amount,
-      order_type
+      order_type,
+      delivery_boy_id
     } = req.body;
 
     if (!items || items.length === 0) {
@@ -100,12 +141,24 @@ router.post('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, a
     }
 
     const saleNumber = `SALE-${Date.now()}-${uuidv4().substring(0, 8).toUpperCase()}`;
+    
+    // Set delivery status based on payment method
+    let deliveryStatus = null;
+    let deliveryBoyId = null;
+    let deliveryAssignedAt = null;
+    
+    if (payment_method === 'payAfterDelivery') {
+      deliveryStatus = delivery_boy_id ? 'assigned' : 'pending';
+      deliveryBoyId = delivery_boy_id || null;
+      deliveryAssignedAt = delivery_boy_id ? new Date().toISOString() : null;
+    }
 
     // Create sale
     const saleResult = await req.db.run(
       `INSERT INTO sales (sale_number, customer_id, user_id, subtotal, discount_amount, discount_type, 
-       vat_percentage, vat_amount, total, payment_method, payment_amount, change_amount, order_type) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       vat_percentage, vat_amount, total, payment_method, payment_amount, change_amount, order_type,
+       delivery_boy_id, delivery_status, delivery_assigned_at) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         saleNumber,
         customer_id || null,
@@ -119,7 +172,10 @@ router.post('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, a
         payment_method,
         parseFloat(payment_amount),
         parseFloat(change_amount) || 0,
-        order_type || 'dine-in'
+        order_type || 'dine-in',
+        deliveryBoyId,
+        deliveryStatus,
+        deliveryAssignedAt
       ]
     );
 
@@ -155,10 +211,12 @@ router.post('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, a
     }
 
     const sale = await req.db.get(
-      `SELECT s.*, u.username as user_name, c.name as customer_name 
+      `SELECT s.*, u.username as user_name, c.name as customer_name,
+       db.username as delivery_boy_name, db.full_name as delivery_boy_full_name
        FROM sales s 
        LEFT JOIN users u ON s.user_id = u.id 
-       LEFT JOIN customers c ON s.customer_id = c.id 
+       LEFT JOIN customers c ON s.customer_id = c.id
+       LEFT JOIN users db ON s.delivery_boy_id = db.id
        WHERE s.id = ?`,
       [saleResult.id]
     );
