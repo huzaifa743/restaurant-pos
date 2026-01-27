@@ -228,7 +228,7 @@ export default function Inventory() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {product.stock_tracking_enabled === 1 || product.stock_tracking_enabled === true ? (
                         <span className={`font-medium ${product.stock_quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {product.stock_quantity || 0}
+                          {product.stock_quantity > 0 ? product.stock_quantity : 'Stock Qty Zero'}
                         </span>
                       ) : (
                         <span className="text-gray-400">—</span>

@@ -32,11 +32,11 @@ router.get('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, as
     const { start_date, end_date, search, payment_method, delivery_status } = req.query;
     
     let sql = `SELECT s.*, u.username as user_name, c.name as customer_name, c.phone as customer_phone,
-               db.username as delivery_boy_name, db.full_name as delivery_boy_full_name
+               db.name as delivery_boy_name
                FROM sales s 
                LEFT JOIN users u ON s.user_id = u.id 
                LEFT JOIN customers c ON s.customer_id = c.id
-               LEFT JOIN users db ON s.delivery_boy_id = db.id
+               LEFT JOIN delivery_boys db ON s.delivery_boy_id = db.id
                WHERE 1=1`;
     const params = [];
 
@@ -87,11 +87,11 @@ router.get('/:id', authenticateToken, requireTenant, getTenantDb, closeTenantDb,
     const sale = await req.db.get(
       `SELECT s.*, u.username as user_name, c.name as customer_name, c.phone as customer_phone, 
        c.email as customer_email, c.address as customer_address, c.city as customer_city, c.country as customer_country,
-       db.username as delivery_boy_name, db.full_name as delivery_boy_full_name
+       db.name as delivery_boy_name
        FROM sales s 
        LEFT JOIN users u ON s.user_id = u.id 
        LEFT JOIN customers c ON s.customer_id = c.id
-       LEFT JOIN users db ON s.delivery_boy_id = db.id
+       LEFT JOIN delivery_boys db ON s.delivery_boy_id = db.id
        WHERE s.id = ?`,
       [req.params.id]
     );
@@ -212,11 +212,11 @@ router.post('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, a
 
     const sale = await req.db.get(
       `SELECT s.*, u.username as user_name, c.name as customer_name,
-       db.username as delivery_boy_name, db.full_name as delivery_boy_full_name
+       db.name as delivery_boy_name
        FROM sales s 
        LEFT JOIN users u ON s.user_id = u.id 
        LEFT JOIN customers c ON s.customer_id = c.id
-       LEFT JOIN users db ON s.delivery_boy_id = db.id
+       LEFT JOIN delivery_boys db ON s.delivery_boy_id = db.id
        WHERE s.id = ?`,
       [saleResult.id]
     );

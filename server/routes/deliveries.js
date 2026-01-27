@@ -32,12 +32,12 @@ router.get('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, as
     
     let sql = `SELECT s.*, u.username as user_name, c.name as customer_name, c.phone as customer_phone,
                c.address as customer_address, c.city as customer_city,
-               db.username as delivery_boy_name, db.full_name as delivery_boy_full_name,
+               db.name as delivery_boy_name,
                (SELECT COUNT(*) FROM sale_items WHERE sale_id = s.id) as item_count
                FROM sales s 
                LEFT JOIN users u ON s.user_id = u.id 
                LEFT JOIN customers c ON s.customer_id = c.id
-               LEFT JOIN users db ON s.delivery_boy_id = db.id
+               LEFT JOIN delivery_boys db ON s.delivery_boy_id = db.id
                WHERE s.payment_method = 'payAfterDelivery'`;
     const params = [];
 
@@ -71,13 +71,19 @@ router.get('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, as
   }
 });
 
-// Get delivery boys (users with role 'delivery' or 'cashier')
+// Get delivery boys (from delivery_boys table)
 router.get('/delivery-boys', authenticateToken, requireTenant, getTenantDb, closeTenantDb, async (req, res) => {
   try {
-    const users = await req.db.query(
-      'SELECT id, username, full_name, role FROM users WHERE role IN ("delivery", "cashier", "admin") ORDER BY full_name, username'
+    const tenantCode = req.user?.tenant_code;
+    if (tenantCode) {
+      const { ensureDeliveryBoysTable } = require('./deliveryBoys');
+      await ensureDeliveryBoysTable(req.db, tenantCode);
+    }
+
+    const deliveryBoys = await req.db.query(
+      'SELECT id, name, phone, email, address, status FROM delivery_boys WHERE status = "active" ORDER BY name'
     );
-    res.json(users);
+    res.json(deliveryBoys);
   } catch (error) {
     console.error('Get delivery boys error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -109,9 +115,9 @@ router.put('/:id/assign', authenticateToken, requireTenant, getTenantDb, closeTe
     }
 
     // Verify delivery boy exists
-    const deliveryBoy = await req.db.get('SELECT id FROM users WHERE id = ?', [delivery_boy_id]);
+    const deliveryBoy = await req.db.get('SELECT id FROM delivery_boys WHERE id = ? AND status = "active"', [delivery_boy_id]);
     if (!deliveryBoy) {
-      return res.status(404).json({ error: 'Delivery boy not found' });
+      return res.status(404).json({ error: 'Delivery boy not found or inactive' });
     }
 
     await req.db.run(
@@ -121,11 +127,11 @@ router.put('/:id/assign', authenticateToken, requireTenant, getTenantDb, closeTe
 
     const updatedSale = await req.db.get(
       `SELECT s.*, u.username as user_name, c.name as customer_name,
-       db.username as delivery_boy_name, db.full_name as delivery_boy_full_name
+       db.name as delivery_boy_name
        FROM sales s 
        LEFT JOIN users u ON s.user_id = u.id 
        LEFT JOIN customers c ON s.customer_id = c.id
-       LEFT JOIN users db ON s.delivery_boy_id = db.id
+       LEFT JOIN delivery_boys db ON s.delivery_boy_id = db.id
        WHERE s.id = ?`,
       [req.params.id]
     );
@@ -181,11 +187,11 @@ router.put('/:id/status', authenticateToken, requireTenant, getTenantDb, closeTe
 
     const updatedSale = await req.db.get(
       `SELECT s.*, u.username as user_name, c.name as customer_name,
-       db.username as delivery_boy_name, db.full_name as delivery_boy_full_name
+       db.name as delivery_boy_name
        FROM sales s 
        LEFT JOIN users u ON s.user_id = u.id 
        LEFT JOIN customers c ON s.customer_id = c.id
-       LEFT JOIN users db ON s.delivery_boy_id = db.id
+       LEFT JOIN delivery_boys db ON s.delivery_boy_id = db.id
        WHERE s.id = ?`,
       [req.params.id]
     );
@@ -209,14 +215,13 @@ router.get('/settlement', authenticateToken, requireRole('admin'), requireTenant
     
     let sql = `SELECT 
                db.id as delivery_boy_id,
-               db.username as delivery_boy_name,
-               db.full_name as delivery_boy_full_name,
+               db.name as delivery_boy_name,
                COUNT(s.id) as total_deliveries,
                SUM(CASE WHEN s.delivery_status = 'payment_collected' THEN s.total ELSE 0 END) as total_collected,
                SUM(CASE WHEN s.delivery_status = 'settled' THEN s.total ELSE 0 END) as total_settled,
                SUM(CASE WHEN s.delivery_status = 'payment_collected' AND s.delivery_settled_at IS NULL THEN s.total ELSE 0 END) as pending_settlement
                FROM sales s
-               LEFT JOIN users db ON s.delivery_boy_id = db.id
+               LEFT JOIN delivery_boys db ON s.delivery_boy_id = db.id
                WHERE s.payment_method = 'payAfterDelivery' 
                AND s.delivery_boy_id IS NOT NULL`;
     
@@ -234,7 +239,7 @@ router.get('/settlement', authenticateToken, requireRole('admin'), requireTenant
       sql += ' AND DATE(s.created_at) = DATE("now")';
     }
 
-    sql += ' GROUP BY db.id, db.username, db.full_name';
+    sql += ' GROUP BY db.id, db.name';
 
     const settlements = await req.db.query(sql, params);
 

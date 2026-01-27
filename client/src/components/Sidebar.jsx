@@ -33,6 +33,7 @@ export default function Sidebar({ isOpen, onToggle }) {
         { path: '/inventory', icon: Package, label: t('nav.inventory') },
         { path: '/sales-history', icon: History, label: t('nav.salesHistory') },
         { path: '/deliveries', icon: Truck, label: 'Deliveries' },
+        ...(user?.role === 'admin' ? [{ path: '/delivery-boys', icon: User, label: 'Delivery Boys' }] : []),
         { path: '/reports', icon: BarChart3, label: t('nav.reports') },
         { path: '/users', icon: Users, label: t('nav.users') },
         { path: '/settings', icon: Settings, label: t('nav.settings') },

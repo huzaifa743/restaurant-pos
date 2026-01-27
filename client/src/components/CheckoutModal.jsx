@@ -154,7 +154,7 @@ export default function CheckoutModal({ total, onClose, onConfirm }) {
                   <option value="">-- Select Delivery Boy --</option>
                   {deliveryBoys.map((boy) => (
                     <option key={boy.id} value={boy.id}>
-                      {boy.full_name || boy.username} ({boy.role})
+                      {boy.name}
                     </option>
                   ))}
                 </select>

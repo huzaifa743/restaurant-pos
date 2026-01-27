@@ -209,7 +209,7 @@ export default function Deliveries() {
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <h3 className="font-semibold text-gray-800">
-                        {settlement.delivery_boy_full_name || settlement.delivery_boy_name}
+                        {settlement.delivery_boy_name}
                       </h3>
                       <p className="text-sm text-gray-600">
                         Total Deliveries: {settlement.total_deliveries}
@@ -293,7 +293,7 @@ export default function Deliveries() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {delivery.delivery_boy_name ? (
-                        <span>{delivery.delivery_boy_full_name || delivery.delivery_boy_name}</span>
+                        <span>{delivery.delivery_boy_name}</span>
                       ) : (
                         <select
                           value=""
