@@ -7,7 +7,11 @@ const router = express.Router();
 const deliveryBoysMigratedTenants = new Set();
 
 async function ensureDeliveryBoysTable(db, tenantCode) {
-  if (!tenantCode || deliveryBoysMigratedTenants.has(tenantCode)) return;
+  // Always ensure table exists, regardless of tenantCode
+  // The migration check is just an optimization to avoid repeated CREATE TABLE calls
+  const cacheKey = tenantCode || 'default';
+  if (deliveryBoysMigratedTenants.has(cacheKey)) return;
+  
   try {
     await db.run(`CREATE TABLE IF NOT EXISTS delivery_boys (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,19 +23,23 @@ async function ensureDeliveryBoysTable(db, tenantCode) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+    deliveryBoysMigratedTenants.add(cacheKey);
   } catch (err) {
-    if (!err.message || !err.message.includes('already exists')) throw err;
+    // If table already exists, that's fine - just mark as migrated
+    if (err.message && err.message.includes('already exists')) {
+      deliveryBoysMigratedTenants.add(cacheKey);
+      return;
+    }
+    // Re-throw other errors
+    throw err;
   }
-  deliveryBoysMigratedTenants.add(tenantCode);
 }
 
 // Get all delivery boys
 router.get('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     const tenantCode = req.user?.tenant_code;
-    if (tenantCode) {
-      await ensureDeliveryBoysTable(req.db, tenantCode);
-    }
+    await ensureDeliveryBoysTable(req.db, tenantCode);
 
     const { status } = req.query;
     let sql = 'SELECT * FROM delivery_boys WHERE 1=1';
@@ -56,9 +64,7 @@ router.get('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, as
 router.get('/:id', authenticateToken, requireTenant, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     const tenantCode = req.user?.tenant_code;
-    if (tenantCode) {
-      await ensureDeliveryBoysTable(req.db, tenantCode);
-    }
+    await ensureDeliveryBoysTable(req.db, tenantCode);
 
     const deliveryBoy = await req.db.get('SELECT * FROM delivery_boys WHERE id = ?', [req.params.id]);
     if (!deliveryBoy) {
@@ -75,9 +81,7 @@ router.get('/:id', authenticateToken, requireTenant, getTenantDb, closeTenantDb,
 router.post('/', authenticateToken, requireRole('admin'), preventDemoModifications, requireTenant, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     const tenantCode = req.user?.tenant_code;
-    if (tenantCode) {
-      await ensureDeliveryBoysTable(req.db, tenantCode);
-    }
+    await ensureDeliveryBoysTable(req.db, tenantCode);
 
     const { name, phone, email, address, status } = req.body;
 
@@ -102,9 +106,7 @@ router.post('/', authenticateToken, requireRole('admin'), preventDemoModificatio
 router.put('/:id', authenticateToken, requireRole('admin'), preventDemoModifications, requireTenant, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     const tenantCode = req.user?.tenant_code;
-    if (tenantCode) {
-      await ensureDeliveryBoysTable(req.db, tenantCode);
-    }
+    await ensureDeliveryBoysTable(req.db, tenantCode);
 
     const { name, phone, email, address, status } = req.body;
 
@@ -129,9 +131,7 @@ router.put('/:id', authenticateToken, requireRole('admin'), preventDemoModificat
 router.delete('/:id', authenticateToken, requireRole('admin'), preventDemoModifications, requireTenant, getTenantDb, closeTenantDb, async (req, res) => {
   try {
     const tenantCode = req.user?.tenant_code;
-    if (tenantCode) {
-      await ensureDeliveryBoysTable(req.db, tenantCode);
-    }
+    await ensureDeliveryBoysTable(req.db, tenantCode);
 
     // Check if delivery boy is assigned to any active deliveries
     const activeDeliveries = await req.db.query(

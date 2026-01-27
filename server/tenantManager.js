@@ -242,24 +242,43 @@ function createTenantDatabase(tenantCode) {
             return;
           }
 
-          // Insert default settings
-          const defaultSettings = [
-            ['restaurant_name', 'My POS'],
-            ['restaurant_logo', ''],
-            ['vat_percentage', '0'],
-            ['currency', 'USD'],
-            ['language', 'en']
-          ];
+          // Delivery boys table
+          db.run(`CREATE TABLE IF NOT EXISTS delivery_boys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            phone TEXT,
+            email TEXT,
+            address TEXT,
+            status TEXT DEFAULT 'active',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )`, (err) => {
+            if (err) {
+              console.error('Error creating delivery_boys table:', err);
+              db.close();
+              reject(err);
+              return;
+            }
 
-          let completed = 0;
-          defaultSettings.forEach(([key, value]) => {
-            db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`, [key, value], (err) => {
-              if (err) console.error(`Error inserting ${key}:`, err);
-              completed++;
-              if (completed === defaultSettings.length) {
-                db.close();
-                resolve(dbPath);
-              }
+            // Insert default settings
+            const defaultSettings = [
+              ['restaurant_name', 'My POS'],
+              ['restaurant_logo', ''],
+              ['vat_percentage', '0'],
+              ['currency', 'USD'],
+              ['language', 'en']
+            ];
+
+            let completed = 0;
+            defaultSettings.forEach(([key, value]) => {
+              db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`, [key, value], (err) => {
+                if (err) console.error(`Error inserting ${key}:`, err);
+                completed++;
+                if (completed === defaultSettings.length) {
+                  db.close();
+                  resolve(dbPath);
+                }
+              });
             });
           });
         });
@@ -272,6 +291,16 @@ function createTenantDatabase(tenantCode) {
 function migrateTenantDatabase(db) {
   return new Promise((resolve, reject) => {
     db.serialize(() => {
+      let migrationsCompleted = 0;
+      const totalMigrations = 2;
+
+      const checkMigrationComplete = () => {
+        migrationsCompleted++;
+        if (migrationsCompleted === totalMigrations) {
+          resolve();
+        }
+      };
+
       // Check if held_sales table exists and create if missing
       db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='held_sales'", (err, row) => {
         if (err) {
@@ -305,12 +334,47 @@ function migrateTenantDatabase(db) {
               reject(err);
             } else {
               console.log('✅ Migration complete: held_sales table created');
-              resolve();
+              checkMigrationComplete();
             }
           });
         } else {
           // Table exists, no migration needed
-          resolve();
+          checkMigrationComplete();
+        }
+      });
+
+      // Check if delivery_boys table exists and create if missing
+      db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='delivery_boys'", (err, row) => {
+        if (err) {
+          console.error('Error checking delivery_boys table:', err);
+          reject(err);
+          return;
+        }
+        
+        if (!row) {
+          // Table doesn't exist, create it
+          console.log('Migrating: Creating delivery_boys table...');
+          db.run(`CREATE TABLE IF NOT EXISTS delivery_boys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            phone TEXT,
+            email TEXT,
+            address TEXT,
+            status TEXT DEFAULT 'active',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )`, (err) => {
+            if (err) {
+              console.error('Error creating delivery_boys table:', err);
+              reject(err);
+            } else {
+              console.log('✅ Migration complete: delivery_boys table created');
+              checkMigrationComplete();
+            }
+          });
+        } else {
+          // Table exists, no migration needed
+          checkMigrationComplete();
         }
       });
     });
