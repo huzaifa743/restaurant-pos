@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +21,40 @@ export default function Deliveries() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [editingNotes, setEditingNotes] = useState(false);
+
+  // Summary stats for cards (based on current filtered deliveries)
+  const {
+    totalDeliveries,
+    pendingCount,
+    receivedCount,
+    totalPendingAmount,
+    totalReceivedAmount,
+  } = useMemo(() => {
+    const totalDeliveries = deliveries.length;
+    let pendingCount = 0;
+    let receivedCount = 0;
+    let totalPendingAmount = 0;
+    let totalReceivedAmount = 0;
+
+    for (const d of deliveries) {
+      if (!d || typeof d.total !== 'number') continue;
+      if (d.delivery_status === 'payment_pending') {
+        pendingCount += 1;
+        totalPendingAmount += d.total;
+      } else if (d.delivery_status === 'payment_received') {
+        receivedCount += 1;
+        totalReceivedAmount += d.total;
+      }
+    }
+
+    return {
+      totalDeliveries,
+      pendingCount,
+      receivedCount,
+      totalPendingAmount,
+      totalReceivedAmount,
+    };
+  }, [deliveries]);
 
   useEffect(() => {
     fetchDeliveries();
@@ -231,6 +265,45 @@ export default function Deliveries() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-800">Delivery Management</h1>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
+          <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">
+            Total Deliveries
+          </p>
+          <p className="text-2xl font-bold text-gray-800">{totalDeliveries}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow border border-yellow-200 p-4">
+          <p className="text-xs uppercase tracking-wide text-yellow-700 mb-1">
+            Pending Payments
+          </p>
+          <p className="text-lg font-semibold text-yellow-900">
+            {formatCurrency(totalPendingAmount)}
+          </p>
+          <p className="text-xs text-yellow-800 mt-1">{pendingCount} delivery(ies)</p>
+        </div>
+        <div className="bg-white rounded-lg shadow border border-green-200 p-4">
+          <p className="text-xs uppercase tracking-wide text-green-700 mb-1">
+            Received Payments
+          </p>
+          <p className="text-lg font-semibold text-green-900">
+            {formatCurrency(totalReceivedAmount)}
+          </p>
+          <p className="text-xs text-green-800 mt-1">{receivedCount} delivery(ies)</p>
+        </div>
+        <div className="bg-white rounded-lg shadow border border-indigo-200 p-4">
+          <p className="text-xs uppercase tracking-wide text-indigo-700 mb-1">
+            Pending vs Received
+          </p>
+          <p className="text-xs text-indigo-900">
+            Pending: <span className="font-semibold">{formatCurrency(totalPendingAmount)}</span>
+          </p>
+          <p className="text-xs text-indigo-900">
+            Received: <span className="font-semibold">{formatCurrency(totalReceivedAmount)}</span>
+          </p>
+        </div>
       </div>
 
       {/* Filters */}
