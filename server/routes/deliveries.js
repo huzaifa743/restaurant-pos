@@ -14,6 +14,7 @@ async function ensureDeliveryColumns(db, tenantCode) {
     await db.run('ALTER TABLE sales ADD COLUMN delivery_settled_at DATETIME');
     await db.run('ALTER TABLE sales ADD COLUMN delivery_assigned_at DATETIME');
     await db.run('ALTER TABLE sales ADD COLUMN delivery_delivered_at DATETIME');
+    await db.run('ALTER TABLE sales ADD COLUMN delivery_settled_amount REAL DEFAULT 0');
   } catch (err) {
     if (!err.message || !err.message.includes('duplicate column')) throw err;
   }
@@ -217,9 +218,18 @@ router.get('/settlement', authenticateToken, requireRole('admin'), requireTenant
                db.id as delivery_boy_id,
                db.name as delivery_boy_name,
                COUNT(s.id) as total_deliveries,
-               SUM(CASE WHEN s.delivery_status = 'payment_collected' THEN s.total ELSE 0 END) as total_collected,
-               SUM(CASE WHEN s.delivery_status = 'settled' THEN s.total ELSE 0 END) as total_settled,
-               SUM(CASE WHEN s.delivery_status = 'payment_collected' AND s.delivery_settled_at IS NULL THEN s.total ELSE 0 END) as pending_settlement
+               -- Total amount collected by delivery boy from customers
+               SUM(CASE WHEN s.delivery_status IN ('payment_collected', 'settled') THEN s.total ELSE 0 END) as total_collected,
+               -- Total amount already settled with delivery boy
+               SUM(COALESCE(s.delivery_settled_amount, 0)) as total_settled,
+               -- Pending amount that should be received from delivery boy
+               SUM(
+                 CASE 
+                   WHEN s.delivery_status IN ('payment_collected', 'settled') 
+                   THEN (s.total - COALESCE(s.delivery_settled_amount, 0))
+                   ELSE 0
+                 END
+               ) as pending_settlement
                FROM sales s
                LEFT JOIN delivery_boys db ON s.delivery_boy_id = db.id
                WHERE s.payment_method = 'payAfterDelivery' 
@@ -261,10 +271,12 @@ router.post('/settle', authenticateToken, requireRole('admin'), requireTenant, g
     const { delivery_boy_id, date } = req.body;
 
     let sql = `UPDATE sales 
-               SET delivery_status = 'settled', delivery_settled_at = CURRENT_TIMESTAMP
+               SET delivery_status = 'settled', 
+                   delivery_settled_at = CURRENT_TIMESTAMP,
+                   delivery_settled_amount = total
                WHERE payment_method = 'payAfterDelivery' 
                AND delivery_status = 'payment_collected'
-               AND delivery_settled_at IS NULL`;
+               AND (delivery_settled_amount IS NULL OR delivery_settled_amount < total)`;
     
     const params = [];
 
@@ -288,6 +300,113 @@ router.post('/settle', authenticateToken, requireRole('admin'), requireTenant, g
     });
   } catch (error) {
     console.error('Settle payments error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Partially settle payments with a delivery boy (collect a specific amount)
+router.post('/settle-partial', authenticateToken, requireRole('admin'), requireTenant, getTenantDb, closeTenantDb, async (req, res) => {
+  try {
+    const tenantCode = req.user?.tenant_code;
+    if (tenantCode) {
+      await ensureDeliveryColumns(req.db, tenantCode);
+    }
+
+    const { delivery_boy_id, date, amount } = req.body;
+
+    if (!delivery_boy_id) {
+      return res.status(400).json({ error: 'Delivery boy ID is required' });
+    }
+
+    const settleAmount = parseFloat(amount);
+    if (!settleAmount || settleAmount <= 0) {
+      return res.status(400).json({ error: 'Settlement amount must be greater than zero' });
+    }
+
+    // Get all deliveries for this boy and date that still have pending amount
+    const params = [delivery_boy_id];
+    let sql = `
+      SELECT 
+        id,
+        total,
+        COALESCE(delivery_settled_amount, 0) as settled_amount
+      FROM sales
+      WHERE payment_method = 'payAfterDelivery'
+        AND delivery_boy_id = ?
+        AND delivery_status IN ('payment_collected', 'settled')
+        AND (total - COALESCE(delivery_settled_amount, 0)) > 0
+    `;
+
+    if (date) {
+      sql += ' AND DATE(created_at) = ?';
+      params.push(date);
+    } else {
+      sql += ' AND DATE(created_at) = DATE("now")';
+    }
+
+    sql += ' ORDER BY created_at ASC';
+
+    const deliveries = await req.db.query(sql, params);
+
+    if (!deliveries || deliveries.length === 0) {
+      return res.status(400).json({ error: 'No pending deliveries found for this delivery boy and date' });
+    }
+
+    let remaining = settleAmount;
+    let affectedCount = 0;
+    let appliedTotal = 0;
+
+    for (const delivery of deliveries) {
+      if (remaining <= 0) break;
+
+      const pending = delivery.total - delivery.settled_amount;
+      if (pending <= 0) continue;
+
+      const apply = Math.min(pending, remaining);
+      const newSettledAmount = delivery.settled_amount + apply;
+      const fullySettled = newSettledAmount >= delivery.total - 0.000001; // handle float precision
+
+      let updateSql = `
+        UPDATE sales
+        SET delivery_settled_amount = ?,
+            delivery_settled_at = CASE 
+              WHEN ? >= total THEN COALESCE(delivery_settled_at, CURRENT_TIMESTAMP)
+              ELSE delivery_settled_at
+            END,
+            delivery_status = CASE 
+              WHEN ? >= total THEN 'settled'
+              ELSE delivery_status
+            END
+        WHERE id = ?
+      `;
+
+      await req.db.run(updateSql, [
+        newSettledAmount,
+        newSettledAmount,
+        newSettledAmount,
+        delivery.id
+      ]);
+
+      remaining -= apply;
+      appliedTotal += apply;
+      affectedCount += 1;
+
+      if (fullySettled && remaining <= 0) {
+        break;
+      }
+    }
+
+    if (appliedTotal === 0) {
+      return res.status(400).json({ error: 'No pending amount could be settled with the provided value' });
+    }
+
+    res.json({
+      message: `Partially settled ${affectedCount} delivery(ies) for a total of ${appliedTotal.toFixed(2)}`,
+      settled_amount: appliedTotal,
+      affected_deliveries: affectedCount
+    });
+  } catch (error) {
+    console.error('Partial settle payments error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

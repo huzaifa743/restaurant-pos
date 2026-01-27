@@ -132,6 +132,47 @@ export default function Deliveries() {
     }
   };
 
+  const handlePartialSettle = async (settlement) => {
+    const maxAmount = settlement.pending_settlement || 0;
+    if (!maxAmount || maxAmount <= 0) {
+      toast.error('No pending amount to settle for this delivery boy');
+      return;
+    }
+
+    const input = window.prompt(
+      `Enter amount to collect from ${settlement.delivery_boy_name} (max ${formatCurrency(maxAmount)}):`,
+      maxAmount
+    );
+
+    if (input === null) return; // cancelled
+
+    const amount = parseFloat(input);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Please enter a valid amount greater than zero');
+      return;
+    }
+
+    if (amount > maxAmount) {
+      toast.error('Amount cannot be greater than pending amount');
+      return;
+    }
+
+    try {
+      const data = {
+        delivery_boy_id: settlement.delivery_boy_id,
+        date: selectedDate,
+        amount
+      };
+      const response = await api.post('/deliveries/settle-partial', data);
+      toast.success(response.data.message || 'Partial payment settled successfully');
+      fetchDeliveries();
+      fetchSettlement();
+    } catch (error) {
+      console.error('Error partially settling payments:', error);
+      toast.error(error.response?.data?.error || 'Failed to partially settle payments');
+    }
+  };
+
   const handleViewDetails = async (delivery) => {
     try {
       const response = await api.get(`/sales/${delivery.id}`);
@@ -353,7 +394,7 @@ export default function Deliveries() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-gray-600">Pending Settlement</p>
+                      <p className="text-sm text-gray-600">Pending Payment (Receivable)</p>
                       <p className="text-xl font-bold text-primary-600">
                         {formatCurrency(settlement.pending_settlement || 0)}
                       </p>
@@ -361,14 +402,14 @@ export default function Deliveries() {
                   </div>
                   <div className="grid grid-cols-3 gap-4 mt-4 text-sm">
                     <div>
-                      <p className="text-gray-600">Total Collected</p>
+                      <p className="text-gray-600">Total Collected (by rider)</p>
                       <p className="font-semibold">{formatCurrency(settlement.total_collected || 0)}</p>
                     </div>
                     <div>
-                      <p className="text-gray-600">Total Settled</p>
+                      <p className="text-gray-600">Already Settled</p>
                       <p className="font-semibold">{formatCurrency(settlement.total_settled || 0)}</p>
                     </div>
-                    <div>
+                    <div className="space-y-2">
                       <button
                         onClick={() => handleSettle(settlement.delivery_boy_id)}
                         disabled={!settlement.pending_settlement || settlement.pending_settlement === 0}
@@ -378,7 +419,18 @@ export default function Deliveries() {
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                         }`}
                       >
-                        Settle Payment
+                        Collect Full ({formatCurrency(settlement.pending_settlement || 0)})
+                      </button>
+                      <button
+                        onClick={() => handlePartialSettle(settlement)}
+                        disabled={!settlement.pending_settlement || settlement.pending_settlement === 0}
+                        className={`w-full px-4 py-2 rounded-lg font-semibold border ${
+                          settlement.pending_settlement && settlement.pending_settlement > 0
+                            ? 'border-primary-600 text-primary-600 hover:bg-primary-50'
+                            : 'border-gray-300 text-gray-400 cursor-not-allowed'
+                        }`}
+                      >
+                        Collect Partial
                       </button>
                     </div>
                   </div>

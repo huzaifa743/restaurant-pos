@@ -56,6 +56,17 @@ export default function Billing() {
   const [showHoldSalesModal, setShowHoldSalesModal] = useState(false);
   const [showSplitPaymentModal, setShowSplitPaymentModal] = useState(false);
 
+  // Safety: whenever a sale is completed, make sure cart and related state are cleared
+  useEffect(() => {
+    if (completedSale) {
+      setCart([]);
+      setSelectedCustomer(null);
+      setDiscountAmount(0);
+      setDiscountType('fixed');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completedSale]);
+
   useEffect(() => {
     fetchProducts();
     fetchCategories();
