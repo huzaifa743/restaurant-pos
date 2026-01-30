@@ -652,7 +652,7 @@ export default function Billing() {
                   key={item.id}
                   className="bg-gray-50 rounded-lg p-3 border border-gray-200"
                 >
-                  {/* Row 1: Product name (left) | Unit price, Total, Delete (right) */}
+                  {/* Row 1: Product name (left) | For weighted: Unit price + Total + Delete; For non-weighted: Total + Delete only */}
                   <div className="flex items-center gap-2 mb-2">
                     {item.product_image && (
                       <img
@@ -668,31 +668,35 @@ export default function Billing() {
                       <p className="text-xs text-gray-500 truncate">{item.category_name}</p>
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <input
-                        type="number"
-                        value={item.unit_price}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value === '' || value === '.') {
-                            updatePrice(item.id, 0);
-                            return;
-                          }
-                          const numValue = parseFloat(value);
-                          if (!isNaN(numValue) && numValue >= 0) updatePrice(item.id, numValue);
-                        }}
-                        onBlur={(e) => {
-                          const value = parseFloat(e.target.value) || 0;
-                          updatePrice(item.id, value);
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-16 px-1.5 py-1 border border-gray-300 rounded text-xs text-right focus:ring-2 focus:ring-primary-500 focus:outline-none"
-                        step="0.01"
-                        min="0"
-                        placeholder="0"
-                      />
-                      <span className="font-semibold text-gray-800 text-sm min-w-[52px] text-right">
-                        {formatCurrency(item.total_price)}
-                      </span>
+                      {item.has_weight && (
+                        <>
+                          <input
+                            type="number"
+                            value={item.unit_price}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === '' || value === '.') {
+                                updatePrice(item.id, 0);
+                                return;
+                              }
+                              const numValue = parseFloat(value);
+                              if (!isNaN(numValue) && numValue >= 0) updatePrice(item.id, numValue);
+                            }}
+                            onBlur={(e) => {
+                              const value = parseFloat(e.target.value) || 0;
+                              updatePrice(item.id, value);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-16 px-1.5 py-1 border border-gray-300 rounded text-xs text-right focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                            step="0.01"
+                            min="0"
+                            placeholder="0"
+                          />
+                          <span className="font-semibold text-gray-800 text-sm min-w-[52px] text-right">
+                            {formatCurrency(item.total_price)}
+                          </span>
+                        </>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -705,98 +709,129 @@ export default function Billing() {
                     </div>
                   </div>
 
-                  {/* Row 2: Quantity controls only - aligned */}
-                  <div className="flex items-center gap-1.5 flex-nowrap border-t border-gray-200 pt-2 mt-0.5">
-                    <button
-                      onClick={() => {
-                        const step = item.has_weight ? 0.1 : 1;
-                        const minQty = item.has_weight ? 0.001 : 0.01;
-                        const newQty = Math.max(minQty, parseFloat((item.quantity - step).toFixed(4)));
-                        updateQuantity(item.id, newQty);
-                      }}
-                      className="w-7 h-7 flex-shrink-0 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    {item.has_weight ? (
-                      <>
+                  {/* Row 2: Quantity controls | For non-weighted only: Unit price + Total */}
+                  <div className="flex items-center justify-between gap-2 flex-nowrap border-t border-gray-200 pt-2 mt-0.5">
+                    <div className="flex items-center gap-1.5 flex-nowrap min-h-[28px]">
+                      <button
+                        onClick={() => {
+                          const step = item.has_weight ? 0.1 : 1;
+                          const minQty = item.has_weight ? 0.001 : 0.01;
+                          const newQty = Math.max(minQty, parseFloat((item.quantity - step).toFixed(4)));
+                          updateQuantity(item.id, newQty);
+                        }}
+                        className="w-7 h-7 flex-shrink-0 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      {item.has_weight ? (
+                        <>
+                          <input
+                            type="number"
+                            step={item.weight_unit === 'kg' ? 0.1 : 1}
+                            min="0"
+                            value={item.weight_unit === 'kg' ? item.quantity : Math.round(item.quantity * 1000)}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              if (raw === '' || raw === '.') return;
+                              const num = parseFloat(raw);
+                              if (isNaN(num) || num < 0) return;
+                              const cartUnit = item.weight_unit || 'gram';
+                              const qtyKg = cartUnit === 'kg' ? num : num / 1000;
+                              if (qtyKg > 0) updateQuantity(item.id, parseFloat(qtyKg.toFixed(4)));
+                            }}
+                            onBlur={(e) => {
+                              const raw = e.target.value;
+                              const num = parseFloat(raw);
+                              if (isNaN(num) || num <= 0) updateQuantity(item.id, 0.001);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-12 h-7 flex-shrink-0 px-1.5 py-1 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                            placeholder={item.weight_unit === 'kg' ? 'kg' : 'g'}
+                          />
+                          <select
+                            value={item.weight_unit || 'gram'}
+                            onChange={(e) => {
+                              const newUnit = e.target.value;
+                              setCart(cart.map((c) => (c.id === item.id ? { ...c, weight_unit: newUnit } : c)));
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-7 flex-shrink-0 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary-500 w-14"
+                          >
+                            <option value="gram">g</option>
+                            <option value="kg">kg</option>
+                          </select>
+                          <span className="text-xs text-gray-500 flex-shrink-0 whitespace-nowrap self-center">
+                            {item.quantity >= 1
+                              ? `= ${item.quantity} kg`
+                              : `= ${Math.round(item.quantity * 1000)} g`}
+                          </span>
+                        </>
+                      ) : (
                         <input
                           type="number"
-                          step={item.weight_unit === 'kg' ? 0.1 : 1}
-                          min="0"
-                          value={item.weight_unit === 'kg' ? item.quantity : Math.round(item.quantity * 1000)}
+                          value={item.quantity}
                           onChange={(e) => {
-                            const raw = e.target.value;
-                            if (raw === '' || raw === '.') return;
-                            const num = parseFloat(raw);
-                            if (isNaN(num) || num < 0) return;
-                            const cartUnit = item.weight_unit || 'gram';
-                            const qtyKg = cartUnit === 'kg' ? num : num / 1000;
-                            if (qtyKg > 0) updateQuantity(item.id, parseFloat(qtyKg.toFixed(4)));
+                            const value = e.target.value;
+                            if (value === '' || value === '.') {
+                              setCart(cart.map((c) => (c.id === item.id ? { ...c, quantity: value === '' ? '' : '.' } : c)));
+                              return;
+                            }
+                            const numValue = parseFloat(value);
+                            if (!isNaN(numValue) && numValue > 0) updateQuantity(item.id, numValue);
+                            else if (numValue === 0) setCart(cart.map((c) => (c.id === item.id ? { ...c, quantity: 0 } : c)));
                           }}
                           onBlur={(e) => {
-                            const raw = e.target.value;
-                            const num = parseFloat(raw);
-                            if (isNaN(num) || num <= 0) updateQuantity(item.id, 0.001);
+                            const value = parseFloat(e.target.value);
+                            if (isNaN(value) || value <= 0) updateQuantity(item.id, 0.01);
+                            else updateQuantity(item.id, value);
                           }}
                           onClick={(e) => e.stopPropagation()}
-                          className="w-12 flex-shrink-0 px-1.5 py-1 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-primary-500 focus:outline-none"
-                          placeholder={item.weight_unit === 'kg' ? 'kg' : 'g'}
+                          className="w-14 h-7 px-1.5 py-1 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                          step="0.01"
+                          min="0.01"
+                          placeholder="0"
                         />
-                        <select
-                          value={item.weight_unit || 'gram'}
+                      )}
+                      <button
+                        onClick={() => {
+                          const step = item.has_weight ? 0.1 : 1;
+                          const newQty = parseFloat((item.quantity + step).toFixed(4));
+                          updateQuantity(item.id, newQty);
+                        }}
+                        className="w-7 h-7 flex-shrink-0 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {!item.has_weight && (
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <input
+                          type="number"
+                          value={item.unit_price}
                           onChange={(e) => {
-                            const newUnit = e.target.value;
-                            setCart(cart.map((c) => (c.id === item.id ? { ...c, weight_unit: newUnit } : c)));
+                            const value = e.target.value;
+                            if (value === '' || value === '.') {
+                              updatePrice(item.id, 0);
+                              return;
+                            }
+                            const numValue = parseFloat(value);
+                            if (!isNaN(numValue) && numValue >= 0) updatePrice(item.id, numValue);
+                          }}
+                          onBlur={(e) => {
+                            const value = parseFloat(e.target.value) || 0;
+                            updatePrice(item.id, value);
                           }}
                           onClick={(e) => e.stopPropagation()}
-                          className="flex-shrink-0 px-1 py-1 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-primary-500 w-10"
-                        >
-                          <option value="gram">g</option>
-                          <option value="kg">kg</option>
-                        </select>
-                        <span className="text-xs text-gray-500 flex-shrink-0 whitespace-nowrap">
-                          {item.quantity >= 1
-                            ? `= ${item.quantity} kg`
-                            : `= ${Math.round(item.quantity * 1000)} g`}
+                          className="w-16 h-7 px-1.5 py-1 border border-gray-300 rounded text-xs text-right focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                          step="0.01"
+                          min="0"
+                          placeholder="0"
+                        />
+                        <span className="font-semibold text-gray-800 text-sm min-w-[52px] text-right">
+                          {formatCurrency(item.total_price)}
                         </span>
-                      </>
-                    ) : (
-                      <input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value === '' || value === '.') {
-                            setCart(cart.map((c) => (c.id === item.id ? { ...c, quantity: value === '' ? '' : '.' } : c)));
-                            return;
-                          }
-                          const numValue = parseFloat(value);
-                          if (!isNaN(numValue) && numValue > 0) updateQuantity(item.id, numValue);
-                          else if (numValue === 0) setCart(cart.map((c) => (c.id === item.id ? { ...c, quantity: 0 } : c)));
-                        }}
-                        onBlur={(e) => {
-                          const value = parseFloat(e.target.value);
-                          if (isNaN(value) || value <= 0) updateQuantity(item.id, 0.01);
-                          else updateQuantity(item.id, value);
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-14 px-1.5 py-1 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-primary-500 focus:outline-none"
-                        step="0.01"
-                        min="0.01"
-                        placeholder="0"
-                      />
+                      </div>
                     )}
-                    <button
-                      onClick={() => {
-                        const step = item.has_weight ? 0.1 : 1;
-                        const newQty = parseFloat((item.quantity + step).toFixed(4));
-                        updateQuantity(item.id, newQty);
-                      }}
-                      className="w-7 h-7 flex-shrink-0 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
               ))}
