@@ -408,6 +408,7 @@ export default function Billing() {
         payment_method: `split:${paymentData.payments.map(p => `${p.method}:${p.amount}`).join(',')}`,
         payment_amount: parseFloat(paymentData.totalPaid),
         change_amount: parseFloat(paymentData.change || 0),
+        sale_date: paymentData.sale_date || null,
       };
 
       const response = await api.post('/sales', saleData);
@@ -508,6 +509,7 @@ export default function Billing() {
         payment_amount: parseFloat(paymentData.amount),
         change_amount: parseFloat(paymentData.change || 0),
         delivery_boy_id: paymentData.delivery_boy_id || null,
+        sale_date: paymentData.sale_date || null,
       };
 
       const response = await api.post('/sales', saleData);

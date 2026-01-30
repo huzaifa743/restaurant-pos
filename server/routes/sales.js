@@ -133,7 +133,8 @@ router.post('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, a
       payment_amount,
       change_amount,
       order_type,
-      delivery_boy_id
+      delivery_boy_id,
+      sale_date
     } = req.body;
 
     if (!items || items.length === 0) {
@@ -154,30 +155,41 @@ router.post('/', authenticateToken, requireTenant, getTenantDb, closeTenantDb, a
       deliveryAssignedAt = deliveryBoyId ? new Date().toISOString() : null;
     }
 
-    // Create sale
-    const saleResult = await req.db.run(
-      `INSERT INTO sales (sale_number, customer_id, user_id, subtotal, discount_amount, discount_type, 
+    // Sale date: use provided date (YYYY-MM-DD) or current time
+    const createdAt = sale_date && typeof sale_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(sale_date.trim())
+      ? `${sale_date.trim()} 12:00:00`
+      : null;
+
+    // Create sale (include created_at when sale_date provided)
+    const insertColumns = `sale_number, customer_id, user_id, subtotal, discount_amount, discount_type, 
        vat_percentage, vat_amount, total, payment_method, payment_amount, change_amount, order_type,
-       delivery_boy_id, delivery_status, delivery_assigned_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        saleNumber,
-        customer_id || null,
-        req.user.id,
-        parseFloat(subtotal),
-        parseFloat(discount_amount) || 0,
-        discount_type || 'fixed',
-        parseFloat(vat_percentage) || 0,
-        parseFloat(vat_amount) || 0,
-        parseFloat(total),
-        payment_method,
-        parseFloat(payment_amount),
-        parseFloat(change_amount) || 0,
-        order_type || 'dine-in',
-        deliveryBoyId,
-        deliveryStatus,
-        deliveryAssignedAt
-      ]
+       delivery_boy_id, delivery_status, delivery_assigned_at`;
+    const insertPlaceholders = createdAt
+      ? `${insertColumns}, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      : `${insertColumns}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const insertValues = [
+      saleNumber,
+      customer_id || null,
+      req.user.id,
+      parseFloat(subtotal),
+      parseFloat(discount_amount) || 0,
+      discount_type || 'fixed',
+      parseFloat(vat_percentage) || 0,
+      parseFloat(vat_amount) || 0,
+      parseFloat(total),
+      payment_method,
+      parseFloat(payment_amount),
+      parseFloat(change_amount) || 0,
+      order_type || 'dine-in',
+      deliveryBoyId,
+      deliveryStatus,
+      deliveryAssignedAt
+    ];
+    if (createdAt) insertValues.push(createdAt);
+
+    const saleResult = await req.db.run(
+      `INSERT INTO sales (${insertPlaceholders}`,
+      insertValues
     );
 
     // Create sale items
