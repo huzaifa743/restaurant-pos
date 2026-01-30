@@ -668,7 +668,7 @@ export default function Billing() {
                       <p className="text-xs text-gray-500 truncate">{item.category_name}</p>
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
-                      {item.has_weight && (
+                      {(item.has_weight === 1 || item.has_weight === true) ? (
                         <>
                           <input
                             type="number"
@@ -696,7 +696,7 @@ export default function Billing() {
                             {formatCurrency(item.total_price)}
                           </span>
                         </>
-                      )}
+                      ) : null}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
