@@ -957,7 +957,7 @@ export default function Billing() {
                 return (
                   <div
                     key={product.id}
-                    className={`bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow ${
+                    className={`flex flex-col h-full bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow ${
                       product.stock_tracking_enabled === 1 && product.stock_quantity !== null && product.stock_quantity <= 0
                         ? 'opacity-50 cursor-not-allowed'
                         : 'cursor-pointer'
@@ -970,34 +970,36 @@ export default function Billing() {
                       addToCart(product);
                     }}
                   >
-                    <h3 className="font-medium text-gray-800 text-sm mb-1">
-                      {product.name}
-                    </h3>
-                    <p className="text-xs text-gray-500 mb-1">
-                      {product.category_name}
-                    </p>
-                    {/* Product Details: Barcode, Expiry, Stock */}
-                    <div className="space-y-1 mb-2">
-                      {product.barcode && (
-                        <div className="flex items-center gap-1 text-xs text-gray-600">
-                          <Tag className="w-3 h-3" />
-                          <span className="truncate">Barcode: {product.barcode}</span>
-                        </div>
-                      )}
-                      {product.expiry_date && (
-                        <div className="text-xs text-gray-600">
-                          <span className="font-medium">Expiry:</span> {new Date(product.expiry_date).toLocaleDateString()}
-                        </div>
-                      )}
-                      {product.stock_tracking_enabled === 1 && (
-                        <div className="text-xs">
-                          <span className={`font-medium ${product.stock_quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {product.stock_quantity > 0 ? `Stock: ${product.stock_quantity}` : 'Out of Stock'}
-                          </span>
-                        </div>
-                      )}
+                    <div className="flex-1 min-h-0">
+                      <h3 className="font-medium text-gray-800 text-sm mb-1">
+                        {product.name}
+                      </h3>
+                      <p className="text-xs text-gray-500 mb-1">
+                        {product.category_name}
+                      </p>
+                      {/* Product Details: Barcode, Expiry, Stock */}
+                      <div className="space-y-1 mb-2">
+                        {product.barcode && (
+                          <div className="flex items-center gap-1 text-xs text-gray-600">
+                            <Tag className="w-3 h-3" />
+                            <span className="truncate">Barcode: {product.barcode}</span>
+                          </div>
+                        )}
+                        {product.expiry_date && (
+                          <div className="text-xs text-gray-600">
+                            <span className="font-medium">Expiry:</span> {new Date(product.expiry_date).toLocaleDateString()}
+                          </div>
+                        )}
+                        {product.stock_tracking_enabled === 1 && (
+                          <div className="text-xs">
+                            <span className={`font-medium ${product.stock_quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {product.stock_quantity > 0 ? `Stock: ${product.stock_quantity}` : 'Out of Stock'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mt-auto flex-shrink-0">
                       <span className="font-semibold text-primary-600">
                         {formatCurrency(product.price)}
                       </span>
