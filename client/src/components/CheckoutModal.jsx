@@ -4,18 +4,22 @@ import { useSettings } from '../contexts/SettingsContext';
 import { X } from 'lucide-react';
 import api from '../api/api';
 
-export default function CheckoutModal({ total, onClose, onConfirm }) {
+export default function CheckoutModal({ total, onClose, onConfirm, initialSaleDate }) {
   const { t } = useTranslation();
   const { formatCurrency } = useSettings();
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentAmount, setPaymentAmount] = useState(total);
   const [customAmount, setCustomAmount] = useState('');
-  const [saleDate, setSaleDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [saleDate, setSaleDate] = useState(() => initialSaleDate || new Date().toISOString().slice(0, 10));
   const [deliveryBoys, setDeliveryBoys] = useState([]);
   const [selectedDeliveryBoy, setSelectedDeliveryBoy] = useState('');
   const [loadingDeliveryBoys, setLoadingDeliveryBoys] = useState(false);
 
   const quickAmounts = [10, 20, 50, 100, 200, 500];
+
+  useEffect(() => {
+    if (initialSaleDate) setSaleDate(initialSaleDate);
+  }, [initialSaleDate]);
 
   useEffect(() => {
     if (paymentMethod === 'payAfterDelivery') {

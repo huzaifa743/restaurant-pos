@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../contexts/SettingsContext';
 import { X, Plus, Trash2 } from 'lucide-react';
 
-export default function SplitPaymentModal({ total, onClose, onConfirm }) {
+export default function SplitPaymentModal({ total, onClose, onConfirm, initialSaleDate }) {
   const { t } = useTranslation();
   const { formatCurrency } = useSettings();
   const [payments, setPayments] = useState([
     { method: 'cash', amount: total }
   ]);
-  const [saleDate, setSaleDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [saleDate, setSaleDate] = useState(() => initialSaleDate || new Date().toISOString().slice(0, 10));
+
+  useEffect(() => {
+    if (initialSaleDate) setSaleDate(initialSaleDate);
+  }, [initialSaleDate]);
 
   const paymentMethods = ['cash', 'card', 'online', 'payAfterDelivery'];
 

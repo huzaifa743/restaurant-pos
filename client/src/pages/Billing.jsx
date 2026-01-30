@@ -55,6 +55,7 @@ export default function Billing() {
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showHoldSalesModal, setShowHoldSalesModal] = useState(false);
   const [showSplitPaymentModal, setShowSplitPaymentModal] = useState(false);
+  const [saleDate, setSaleDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   // Safety: whenever a sale is completed, make sure cart and related state are cleared
   useEffect(() => {
@@ -625,7 +626,6 @@ export default function Billing() {
               <ShoppingCart className="w-5 h-5" />
               {t('billing.cart')}
             </h2>
-            {/* Select Customer Button - In cart row */}
             <button
               onClick={() => setShowCustomerModal(true)}
               className="px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2 text-sm"
@@ -638,7 +638,16 @@ export default function Billing() {
                 : t('billing.selectCustomer')}
             </button>
           </div>
-
+          <div className="mb-0">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Sale Date</label>
+            <input
+              type="date"
+              value={saleDate}
+              onChange={(e) => setSaleDate(e.target.value)}
+              max={new Date().toISOString().slice(0, 10)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none"
+            />
+          </div>
         </div>
 
         {/* Cart Items */}
@@ -1155,6 +1164,7 @@ export default function Billing() {
       {showCheckoutModal && (
         <CheckoutModal
           total={total}
+          initialSaleDate={saleDate}
           onClose={() => setShowCheckoutModal(false)}
           onConfirm={handlePayment}
         />
@@ -1239,6 +1249,7 @@ export default function Billing() {
       {showSplitPaymentModal && (
         <SplitPaymentModal
           total={calculateTotals().total}
+          initialSaleDate={saleDate}
           onClose={() => setShowSplitPaymentModal(false)}
           onConfirm={handleSplitPayment}
         />
