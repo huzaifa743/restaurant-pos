@@ -745,9 +745,23 @@ export default function Billing() {
                               if (isNaN(num) || num <= 0) updateQuantity(item.id, 0.001);
                             }}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-12 h-7 flex-shrink-0 px-1.5 py-1 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                            className="w-20 h-7 flex-shrink-0 px-2 py-1 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-primary-500 focus:outline-none"
                             placeholder={item.weight_unit === 'kg' ? 'kg' : 'g'}
                           />
+                          <button
+                            onClick={() => {
+                              const newQty = parseFloat((item.quantity + 0.1).toFixed(4));
+                              updateQuantity(item.id, newQty);
+                            }}
+                            className="w-7 h-7 flex-shrink-0 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                          <span className="text-xs text-gray-500 flex-shrink-0 whitespace-nowrap self-center">
+                            {item.quantity >= 1
+                              ? `= ${item.quantity} kg`
+                              : `= ${Math.round(item.quantity * 1000)} g`}
+                          </span>
                           <select
                             value={item.weight_unit || 'gram'}
                             onChange={(e) => {
@@ -760,11 +774,6 @@ export default function Billing() {
                             <option value="gram">g</option>
                             <option value="kg">kg</option>
                           </select>
-                          <span className="text-xs text-gray-500 flex-shrink-0 whitespace-nowrap self-center">
-                            {item.quantity >= 1
-                              ? `= ${item.quantity} kg`
-                              : `= ${Math.round(item.quantity * 1000)} g`}
-                          </span>
                         </>
                       ) : (
                         <input
@@ -792,16 +801,17 @@ export default function Billing() {
                           placeholder="0"
                         />
                       )}
-                      <button
-                        onClick={() => {
-                          const step = item.has_weight ? 0.1 : 1;
-                          const newQty = parseFloat((item.quantity + step).toFixed(4));
-                          updateQuantity(item.id, newQty);
-                        }}
-                        className="w-7 h-7 flex-shrink-0 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
+                      {!item.has_weight && (
+                        <button
+                          onClick={() => {
+                            const newQty = parseFloat((item.quantity + 1).toFixed(4));
+                            updateQuantity(item.id, newQty);
+                          }}
+                          className="w-7 h-7 flex-shrink-0 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                     {!item.has_weight && (
                       <div className="flex items-center gap-1.5 flex-shrink-0">
