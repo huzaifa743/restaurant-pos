@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSettings } from '../contexts/SettingsContext';
 import api from '../api/api';
 import toast from 'react-hot-toast';
-import { BarChart3, TrendingUp } from 'lucide-react';
+import { BarChart3, TrendingUp, FileDown, FileText } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -85,6 +85,188 @@ export default function Reports() {
     fetchReports();
   };
 
+  const escapeHtml = (str) => {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  };
+
+  // Escape CSV cell (wrap in quotes if contains comma or quote)
+  const escapeCsvCell = (val) => {
+    const s = String(val ?? '');
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+
+  const exportCsv = () => {
+    let headers = [];
+    let rows = [];
+    let filename = '';
+
+    if (reportType === 'sales' && salesReport?.sales?.length) {
+      headers = ['Sale #', 'Date', 'Customer', 'Items', 'Total', 'Payment Method'];
+      rows = salesReport.sales.map((s) => [
+        s.sale_number,
+        new Date(s.created_at).toLocaleDateString(),
+        s.customer_name || 'Walk-in',
+        s.item_count,
+        (s.total ?? 0).toString(),
+        s.payment_method || '',
+      ]);
+      filename = `sales-report-${startDate}-to-${endDate}.csv`;
+    } else if (reportType === 'products' && productReport?.products?.length) {
+      headers = ['Product', 'Category', 'Price', 'Purchase Rate', 'Quantity Sold', 'Total Revenue', 'Total Cost', 'Profit'];
+      rows = productReport.products.map((p) => [
+        p.name,
+        p.category_name || 'Uncategorized',
+        (p.price ?? 0).toString(),
+        (p.purchase_rate ?? '').toString(),
+        (p.total_quantity ?? 0).toString(),
+        (p.total_revenue ?? 0).toString(),
+        (p.total_cost ?? 0).toString(),
+        (p.total_profit ?? 0).toString(),
+      ]);
+      filename = `products-report-${startDate}-to-${endDate}.csv`;
+    } else if (reportType === 'users' && usersReport?.users?.length) {
+      headers = ['User', 'Role', 'Total Sales', 'Total Revenue', 'Total Discount', 'Total VAT', 'Items Sold'];
+      rows = usersReport.users.map((u) => [
+        u.full_name || u.username,
+        u.role || '',
+        (u.total_sales ?? 0).toString(),
+        (u.total_revenue ?? 0).toString(),
+        (u.total_discount ?? 0).toString(),
+        (u.total_vat ?? 0).toString(),
+        (u.total_items_sold ?? 0).toString(),
+      ]);
+      filename = `users-report-${startDate}-to-${endDate}.csv`;
+    }
+
+    if (!rows.length) {
+      toast.error('No data to export');
+      return;
+    }
+    const csvContent = [headers.map(escapeCsvCell).join(','), ...rows.map((r) => r.map(escapeCsvCell).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('CSV exported');
+  };
+
+  const exportPdf = () => {
+    let title = '';
+    let summaryHtml = '';
+    let tableHeaders = [];
+    let tableRows = [];
+
+    if (reportType === 'sales' && salesReport) {
+      title = `Sales Report (${startDate} to ${endDate})`;
+      summaryHtml = `
+        <p><strong>Total Sales:</strong> ${salesReport.summary?.totalSales ?? 0}</p>
+        <p><strong>Total Revenue:</strong> ${formatCurrency(salesReport.summary?.totalRevenue ?? 0)}</p>
+        <p><strong>Total Discount:</strong> ${formatCurrency(salesReport.summary?.totalDiscount ?? 0)}</p>
+        <p><strong>Total VAT:</strong> ${formatCurrency(salesReport.summary?.totalVAT ?? 0)}</p>
+      `;
+      tableHeaders = ['Sale #', 'Date', 'Customer', 'Items', 'Total', 'Payment'];
+      tableRows = (salesReport.sales || []).map((s) => [
+        s.sale_number,
+        new Date(s.created_at).toLocaleDateString(),
+        s.customer_name || 'Walk-in',
+        String(s.item_count ?? 0),
+        formatCurrency(s.total),
+        s.payment_method || '',
+      ]);
+    } else if (reportType === 'products' && productReport) {
+      title = `Products Report (${startDate} to ${endDate})`;
+      summaryHtml = `
+        <p><strong>Total Products:</strong> ${productReport.summary?.totalProducts ?? 0}</p>
+        <p><strong>Quantity Sold:</strong> ${productReport.summary?.totalQuantitySold ?? 0}</p>
+        <p><strong>Total Revenue:</strong> ${formatCurrency(productReport.summary?.totalRevenue ?? 0)}</p>
+        <p><strong>Total Cost:</strong> ${formatCurrency(productReport.summary?.totalCost ?? 0)}</p>
+        <p><strong>Total Profit:</strong> ${formatCurrency(productReport.summary?.totalProfit ?? 0)}</p>
+      `;
+      tableHeaders = ['Product', 'Category', 'Price', 'Purchase Rate', 'Qty Sold', 'Revenue', 'Cost', 'Profit'];
+      tableRows = (productReport.products || []).map((p) => [
+        p.name,
+        p.category_name || 'Uncategorized',
+        formatCurrency(p.price),
+        p.purchase_rate ? formatCurrency(p.purchase_rate) : '—',
+        String(p.total_quantity ?? 0),
+        formatCurrency(p.total_revenue),
+        p.purchase_rate ? formatCurrency(p.total_cost || 0) : '—',
+        p.purchase_rate ? formatCurrency(p.total_profit || 0) : '—',
+      ]);
+    } else if (reportType === 'users' && usersReport) {
+      title = `Sales by Users Report (${startDate} to ${endDate})`;
+      summaryHtml = `
+        <p><strong>Total Users:</strong> ${usersReport.summary?.totalUsers ?? 0}</p>
+        <p><strong>Total Sales:</strong> ${usersReport.summary?.totalSales ?? 0}</p>
+        <p><strong>Total Revenue:</strong> ${formatCurrency(usersReport.summary?.totalRevenue ?? 0)}</p>
+        <p><strong>Total Items Sold:</strong> ${usersReport.summary?.totalItemsSold ?? 0}</p>
+      `;
+      tableHeaders = ['User', 'Role', 'Total Sales', 'Revenue', 'Discount', 'VAT', 'Items Sold'];
+      tableRows = (usersReport.users || []).map((u) => [
+        u.full_name || u.username,
+        u.role || '',
+        String(u.total_sales ?? 0),
+        formatCurrency(u.total_revenue ?? 0),
+        formatCurrency(u.total_discount ?? 0),
+        formatCurrency(u.total_vat ?? 0),
+        String(u.total_items_sold ?? 0),
+      ]);
+    }
+
+    if (!tableRows.length) {
+      toast.error('No data to export');
+      return;
+    }
+
+    const thCells = tableHeaders.map((h) => `<th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f5f5f5;">${escapeHtml(h)}</th>`).join('');
+    const bodyRows = tableRows.map(
+      (row) => `<tr>${row.map((cell) => `<td style="border:1px solid #ddd;padding:8px;">${escapeHtml(String(cell))}</td>`).join('')}</tr>`
+    ).join('');
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head>
+        <body style="font-family:system-ui,sans-serif;padding:20px;">
+          <h1>${escapeHtml(title)}</h1>
+          <div style="margin-bottom:20px;">${summaryHtml}</div>
+          <table style="border-collapse:collapse;width:100%;">
+            <thead><tr>${thCells}</tr></thead>
+            <tbody>${bodyRows}</tbody>
+          </table>
+          <p style="margin-top:20px;color:#666;font-size:12px;">Generated on ${new Date().toLocaleString()}</p>
+        </body>
+      </html>
+    `;
+
+    const win = window.open('', '_blank');
+    if (!win) {
+      toast.error('Please allow pop-ups to export PDF');
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => {
+      win.print();
+    }, 250);
+  };
+
+  const hasReportData = () => {
+    if (reportType === 'sales' && salesReport?.sales?.length) return true;
+    if (reportType === 'products' && productReport?.products?.length) return true;
+    if (reportType === 'users' && usersReport?.users?.length) return true;
+    return false;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -155,13 +337,33 @@ export default function Reports() {
           </div>
         )}
 
-        <button
-          onClick={handleFilter}
-          className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
-        >
-          <BarChart3 className="w-5 h-5" />
-          {t('reports.filter')}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleFilter}
+            className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
+          >
+            <BarChart3 className="w-5 h-5" />
+            {t('reports.filter')}
+          </button>
+          {hasReportData() && (
+            <>
+              <button
+                onClick={exportCsv}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+              >
+                <FileDown className="w-5 h-5" />
+                Export CSV
+              </button>
+              <button
+                onClick={exportPdf}
+                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+              >
+                <FileText className="w-5 h-5" />
+                Export PDF
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Sales Report */}
